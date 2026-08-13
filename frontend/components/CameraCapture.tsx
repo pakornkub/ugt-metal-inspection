@@ -30,9 +30,7 @@ export default function CameraCapture({
   const [starting, setStarting] = useState(false);
   const [ready, setReady] = useState(false);
   const [capturing, setCapturing] = useState(false);
-  const [facingMode, setFacingMode] = useState<"environment" | "user">(
-    "environment"
-  );
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
 
   useEffect(() => {
     if (!open) {
@@ -85,8 +83,7 @@ export default function CameraCapture({
           if (!cancelled) setReady(true);
         }, FOCUS_SETTLE_MS);
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "ไม่สามารถเปิดกล้องได้";
+        const message = err instanceof Error ? err.message : "ไม่สามารถเปิดกล้องได้";
         setError(
           message.includes("Permission") || message.includes("NotAllowed")
             ? "ไม่ได้รับอนุญาตใช้กล้อง กรุณาอนุญาตในเบราว์เซอร์"
@@ -104,7 +101,6 @@ export default function CameraCapture({
       if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
       stopCamera();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, facingMode]);
 
   function stopCamera() {
@@ -201,20 +197,20 @@ export default function CameraCapture({
   const shutterDisabled = starting || !ready || !!error || capturing;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 flex flex-col">
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/90">
       <div className="flex items-center justify-between px-4 py-3 text-white">
         <p className="font-semibold">{title}</p>
         <button
           type="button"
           onClick={handleClose}
-          className="p-2 rounded-full active:bg-white/10"
+          className="rounded-full p-2 active:bg-white/10"
           aria-label="ปิดกล้อง"
         >
-          <X className="w-6 h-6" />
+          <X className="h-6 w-6" />
         </button>
       </div>
 
-      <div className="relative flex-1 flex items-center justify-center overflow-hidden bg-black">
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-black">
         <video
           ref={videoRef}
           playsInline
@@ -224,9 +220,9 @@ export default function CameraCapture({
         />
 
         {qrGuide && !starting && !error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
-            <div className="w-[70vmin] max-w-[80%] aspect-square rounded-2xl border-4 border-dashed border-white/80" />
-            <p className="text-white text-sm font-medium bg-black/50 px-3 py-1 rounded-lg">
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3">
+            <div className="aspect-square w-[70vmin] max-w-[80%] rounded-2xl border-4 border-dashed border-white/80" />
+            <p className="rounded-lg bg-black/50 px-3 py-1 text-sm font-medium text-white">
               จัดให้ QR อยู่ในกรอบ ใกล้และชัดที่สุด
             </p>
           </div>
@@ -234,20 +230,20 @@ export default function CameraCapture({
 
         {starting && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-            <Loader2 className="w-10 h-10 text-white animate-spin" />
+            <Loader2 className="h-10 w-10 animate-spin text-white" />
           </div>
         )}
 
         {!starting && !ready && !error && (
-          <div className="absolute bottom-3 inset-x-0 flex justify-center pointer-events-none">
-            <p className="text-white text-xs font-medium bg-black/50 px-3 py-1 rounded-lg">
+          <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+            <p className="rounded-lg bg-black/50 px-3 py-1 text-xs font-medium text-white">
               กำลังปรับโฟกัส...
             </p>
           </div>
         )}
 
         {error && (
-          <div className="absolute inset-x-4 bottom-4 rounded-xl bg-red-600/90 text-white px-4 py-3 text-sm text-center">
+          <div className="absolute inset-x-4 bottom-4 rounded-xl bg-red-600/90 px-4 py-3 text-center text-sm text-white">
             {error}
           </div>
         )}
@@ -258,27 +254,27 @@ export default function CameraCapture({
           type="button"
           onClick={toggleFacing}
           disabled={starting || !!error}
-          className="w-12 h-12 rounded-full bg-white/15 text-white flex items-center justify-center disabled:opacity-40"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 text-white disabled:opacity-40"
           aria-label="สลับกล้อง"
         >
-          <SwitchCamera className="w-6 h-6" />
+          <SwitchCamera className="h-6 w-6" />
         </button>
 
         <button
           type="button"
           onClick={() => void handleCapture()}
           disabled={shutterDisabled}
-          className="w-20 h-20 rounded-full border-4 border-white bg-white/90 active:scale-95 disabled:opacity-40 flex items-center justify-center"
+          className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-white/90 active:scale-95 disabled:opacity-40"
           aria-label="ถ่ายรูป"
         >
           {capturing ? (
-            <Loader2 className="w-8 h-8 text-slate-800 animate-spin" />
+            <Loader2 className="h-8 w-8 animate-spin text-slate-800" />
           ) : (
-            <Camera className="w-8 h-8 text-slate-800" />
+            <Camera className="h-8 w-8 text-slate-800" />
           )}
         </button>
 
-        <div className="w-12 h-12" />
+        <div className="h-12 w-12" />
       </div>
     </div>
   );

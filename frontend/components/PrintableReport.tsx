@@ -35,9 +35,7 @@ export default function PrintableReport({ records }: PrintableReportProps) {
               <span>Box Type: {r.box_type}</span>
               <span
                 className={
-                  r.overall_result === "PASS"
-                    ? "print-overall-pass"
-                    : "print-overall-fail"
+                  r.overall_result === "PASS" ? "print-overall-pass" : "print-overall-fail"
                 }
               >
                 Overall: {r.overall_result}

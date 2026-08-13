@@ -1,0 +1,113 @@
+# Dev compose — deployed by Jenkins on the `develop` branch. Same shape as
+# docker-compose.yml with -dev names, offset host ports, and a separate DB so
+# dev data never touches prod. Local run: `docker compose -f docker-compose.dev.yml --env-file .env.dev up --build`.
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2017-latest
+    container_name: box-inspection-mssql-dev
+    environment:
+      SA_PASSWORD: "${DB_PASSWORD:-YourStrong!Passw0rd}"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Express"
+    ports:
+      - "${DB_PORT:-1443}:1433"
+    volumes:
+      # ponytail: named volume — see docker-compose.yml for why mssql is the
+      # one exception to the /srv/appdata bind-mount contract.
+      - mssql_data_dev:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P '${DB_PASSWORD:-YourStrong!Passw0rd}' -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - box-inspection-dev-net
+
+  ai-service:
+    build: ./ai-service
+    image: box-inspection-ai-dev:${TAG:-latest}
+    pull_policy: never
+    container_name: box-inspection-ai-dev
+    ports:
+      - "${AI_PORT:-8010}:8000"
+    environment:
+      AI_MOCK: "false"
+      MODEL_PATH: "models/box_lock_model.pt"
+      AI_CONF_THRESHOLD: "0.25"
+    volumes:
+      - ./ai-service/models:/app/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - box-inspection-dev-net
+
+  backend:
+    build: ./backend
+    image: box-inspection-backend-dev:${TAG:-latest}
+    pull_policy: never
+    container_name: box-inspection-backend-dev
+    ports:
+      - "${BACKEND_PORT:-3111}:3101"
+    environment:
+      DATABASE_URL: "sqlserver://mssql:1433;database=box_inspection_dev;user=sa;password=${DB_PASSWORD:-YourStrong!Passw0rd};encrypt=false;trustServerCertificate=true"
+      PORT: "3101"
+      AI_SERVICE_URL: "http://ai-service:8000"
+      UPLOAD_DIR: "uploads"
+    volumes:
+      - /srv/appdata/box-inspection-dev/uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3101/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      mssql:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - box-inspection-dev-net
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: "http://backend:3101"
+        NEXT_PUBLIC_BASE_PATH: "${NEXT_PUBLIC_BASE_PATH:-/ugt-metal-inspection-dev}"
+        NEXT_PUBLIC_APP_URL: "${NEXT_PUBLIC_APP_URL:-https://ugtweb.ube.co.th/ugt-metal-inspection-dev}"
+    image: box-inspection-frontend-dev:${TAG:-latest}
+    pull_policy: never
+    container_name: box-inspection-frontend-dev
+    ports:
+      - "${FRONTEND_PORT:-3110}:3100"
+    environment:
+      BACKEND_URL: "http://backend:3101"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3100/ugt-metal-inspection-dev/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - box-inspection-dev-net
+
+volumes:
+  mssql_data_dev:
+    name: box-inspection-mssql-dev-data
+
+networks:
+  box-inspection-dev-net:
+    name: box-inspection-dev-network

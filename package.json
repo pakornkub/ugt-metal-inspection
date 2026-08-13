@@ -9,6 +9,10 @@
     "dev:backend": "npm run dev --prefix backend",
     "dev:ai": "cd ai-service && uvicorn main:app --reload --port 8000",
     "docker:up": "docker compose up --build -d",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
   }
 }

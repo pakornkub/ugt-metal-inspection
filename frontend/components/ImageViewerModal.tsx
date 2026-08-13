@@ -7,10 +7,7 @@ interface ImageViewerModalProps {
   onClose: () => void;
 }
 
-export default function ImageViewerModal({
-  imageUrl,
-  onClose,
-}: ImageViewerModalProps) {
+export default function ImageViewerModal({ imageUrl, onClose }: ImageViewerModalProps) {
   if (!imageUrl) return null;
 
   return (
@@ -22,9 +19,9 @@ export default function ImageViewerModal({
         type="button"
         onClick={onClose}
         aria-label="Close"
-        className="absolute top-4 right-4 rounded-full bg-white/90 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg"
+        className="absolute top-4 right-4 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/90 p-2 shadow-lg"
       >
-        <X className="w-6 h-6 text-slate-800" />
+        <X className="h-6 w-6 text-slate-800" />
       </button>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img

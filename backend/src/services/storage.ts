@@ -12,10 +12,7 @@ export function ensureUploadDir(): string {
   return dir;
 }
 
-export function saveUploadedFile(
-  file: Express.Multer.File,
-  prefix = "angle"
-): string {
+export function saveUploadedFile(file: Express.Multer.File, prefix = "angle"): string {
   const dir = ensureUploadDir();
   const ext = path.extname(file.originalname) || ".jpg";
   const filename = `${prefix}_${randomUUID()}${ext}`;

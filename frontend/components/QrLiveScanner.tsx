@@ -32,6 +32,7 @@ export default function QrLiveScanner({
 
     let cancelled = false;
     handledRef.current = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets scan state before starting the external QR scanner, not a cascading update
     setError(null);
     setStarting(true);
 
@@ -111,20 +112,20 @@ export default function QrLiveScanner({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+    <div className="fixed inset-0 z-50 flex flex-col bg-black">
       <div className="flex items-center justify-between px-4 py-3 text-white">
         <p className="font-semibold">{title}</p>
         <button
           type="button"
           onClick={handleClose}
-          className="p-2 rounded-full active:bg-white/10"
+          className="rounded-full p-2 active:bg-white/10"
           aria-label="ปิดกล้อง"
         >
-          <X className="w-6 h-6" />
+          <X className="h-6 w-6" />
         </button>
       </div>
 
-      <div className="relative flex-1 overflow-hidden bg-black flex items-center justify-center">
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-black">
         {/* Let html5-qrcode size the <video> to the container width at the
             stream's natural aspect ratio. Do NOT force object-cover / a
             non-square box — the library maps its decode canvas from the
@@ -133,8 +134,8 @@ export default function QrLiveScanner({
         <div id={CONTAINER_ID} className="w-full max-w-[100vmin]" />
 
         {!starting && !error && (
-          <div className="absolute inset-x-0 bottom-6 flex justify-center px-4 pointer-events-none">
-            <p className="text-white text-sm font-medium bg-black/50 px-3 py-1 rounded-lg text-center">
+          <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center px-4">
+            <p className="rounded-lg bg-black/50 px-3 py-1 text-center text-sm font-medium text-white">
               {hint ?? "เล็ง QR ให้อยู่ในกรอบ ระบบจะอ่านให้เองอัตโนมัติ"}
             </p>
           </div>
@@ -142,12 +143,12 @@ export default function QrLiveScanner({
 
         {starting && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-            <Loader2 className="w-10 h-10 text-white animate-spin" />
+            <Loader2 className="h-10 w-10 animate-spin text-white" />
           </div>
         )}
 
         {error && (
-          <div className="absolute inset-x-4 bottom-4 rounded-xl bg-red-600/90 text-white px-4 py-3 text-sm text-center">
+          <div className="absolute inset-x-4 bottom-4 rounded-xl bg-red-600/90 px-4 py-3 text-center text-sm text-white">
             {error}
           </div>
         )}

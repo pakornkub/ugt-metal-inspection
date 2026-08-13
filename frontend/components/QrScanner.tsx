@@ -35,18 +35,16 @@ export default function QrScanner({
   }
 
   return (
-    <div className="rounded-2xl border-2 border-slate-200 bg-white overflow-hidden shadow-sm">
-      <div className="relative min-h-[120px] bg-slate-50 flex items-center justify-center">
+    <div className="overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-sm">
+      <div className="relative flex min-h-[120px] items-center justify-center bg-slate-50">
         {hasValue ? (
           <div className="flex flex-col items-center gap-2 text-slate-700">
-            <Check className="w-9 h-9 text-green-500" />
-            <span className="text-2xl font-bold">
-              {caseNo ? `${lotNo}-${caseNo}` : lotNo}
-            </span>
+            <Check className="h-9 w-9 text-green-500" />
+            <span className="text-2xl font-bold">{caseNo ? `${lotNo}-${caseNo}` : lotNo}</span>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 text-slate-400">
-            <QrCode className="w-10 h-10" />
+            <QrCode className="h-10 w-10" />
             <span className="text-sm font-medium">Lot No</span>
           </div>
         )}
@@ -56,15 +54,15 @@ export default function QrScanner({
         <button
           type="button"
           onClick={() => setScanOpen(true)}
-          className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold text-slate-700 bg-white active:bg-slate-50 min-h-[48px]"
+          className="flex min-h-[48px] flex-1 items-center justify-center gap-2 bg-white py-3 text-sm font-semibold text-slate-700 active:bg-slate-50"
         >
-          <ScanLine className="w-5 h-5" />
+          <ScanLine className="h-5 w-5" />
           {hasValue ? "สแกนใหม่" : "สแกน Lot No"}
         </button>
       </div>
 
       {error && (
-        <div className="px-3 py-2 border-t-2 border-slate-200 text-center">
+        <div className="border-t-2 border-slate-200 px-3 py-2 text-center">
           <p className="text-xs text-red-500">{error}</p>
         </div>
       )}

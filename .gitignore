@@ -1,9 +1,14 @@
 node_modules/
 dist/
 .next/
+coverage/
+test-results/
+dc-report/
+.scannerwork/
 backend/uploads/*
 !uploads/.gitkeep
 .env
+.env.dev
 .env.local
 .env.*.local
 *.pyc
@@ -14,3 +19,4 @@ ai-service/models/*.pt
 ai-service/models/*.onnx
 frontend/certificates/
 build-log.txt
+.claude/logs/

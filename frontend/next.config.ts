@@ -5,6 +5,7 @@ const backendUrl = process.env.BACKEND_URL || "http://localhost:3101";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || "",
   // Allow iPhone/iPad on LAN to load the Next.js dev server
   allowedDevOrigins: [
     "*.trycloudflare.com",

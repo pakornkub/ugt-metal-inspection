@@ -80,7 +80,7 @@ export default function AngleCapture({ angle, data, onUpdate }: AngleCaptureProp
   return (
     <div className="flex flex-col gap-2">
       <div
-        className={`rounded-2xl border-2 bg-white overflow-hidden shadow-sm ${
+        className={`overflow-hidden rounded-2xl border-2 bg-white shadow-sm ${
           data.result === "LOCK"
             ? "border-green-500"
             : data.result === "UNLOCK"
@@ -90,24 +90,24 @@ export default function AngleCapture({ angle, data, onUpdate }: AngleCaptureProp
                 : "border-slate-200"
         }`}
       >
-        <div className="relative min-h-[180px] bg-slate-50 flex items-center justify-center">
+        <div className="relative flex min-h-[180px] items-center justify-center bg-slate-50">
           {data.previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={data.previewUrl}
               alt={`Angle ${angle}`}
-              className="w-full h-[180px] object-cover"
+              className="h-[180px] w-full object-cover"
             />
           ) : (
             <div className="flex flex-col items-center gap-2 text-slate-400">
-              <Camera className="w-10 h-10" />
+              <Camera className="h-10 w-10" />
               <span className="text-sm font-medium">Angle {angle}</span>
             </div>
           )}
 
           {data.processing && (
-            <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-              <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center bg-white/70">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
             </div>
           )}
         </div>
@@ -117,18 +117,18 @@ export default function AngleCapture({ angle, data, onUpdate }: AngleCaptureProp
             type="button"
             onClick={() => setCameraOpen(true)}
             disabled={data.processing}
-            className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold text-slate-700 bg-white active:bg-slate-50 min-h-[48px] disabled:opacity-50 border-r border-slate-200"
+            className="flex min-h-[48px] flex-1 items-center justify-center gap-2 border-r border-slate-200 bg-white py-3 text-sm font-semibold text-slate-700 active:bg-slate-50 disabled:opacity-50"
           >
-            <Camera className="w-5 h-5" />
+            <Camera className="h-5 w-5" />
             Camera
           </button>
           <button
             type="button"
             onClick={() => uploadRef.current?.click()}
             disabled={data.processing}
-            className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold text-slate-700 bg-white active:bg-slate-50 min-h-[48px] disabled:opacity-50"
+            className="flex min-h-[48px] flex-1 items-center justify-center gap-2 bg-white py-3 text-sm font-semibold text-slate-700 active:bg-slate-50 disabled:opacity-50"
           >
-            <Upload className="w-5 h-5" />
+            <Upload className="h-5 w-5" />
             Upload
           </button>
         </div>
@@ -143,12 +143,12 @@ export default function AngleCapture({ angle, data, onUpdate }: AngleCaptureProp
       </div>
 
       <div
-        className={`text-center text-xl font-bold py-1 ${resultColor(data.result, data.processing)}`}
+        className={`py-1 text-center text-xl font-bold ${resultColor(data.result, data.processing)}`}
       >
         {resultLabel(data.result, data.processing)}
       </div>
 
-      {error && <p className="text-xs text-yellow-600 text-center">{error}</p>}
+      {error && <p className="text-center text-xs text-yellow-600">{error}</p>}
 
       <CameraCapture
         open={cameraOpen}

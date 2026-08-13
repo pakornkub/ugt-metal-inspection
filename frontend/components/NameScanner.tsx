@@ -24,16 +24,16 @@ export default function NameScanner({ name, onNameChange }: NameScannerProps) {
   }
 
   return (
-    <div className="rounded-2xl border-2 border-slate-200 bg-white overflow-hidden shadow-sm">
-      <div className="relative min-h-[120px] bg-slate-50 flex items-center justify-center">
+    <div className="overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-sm">
+      <div className="relative flex min-h-[120px] items-center justify-center bg-slate-50">
         {name ? (
           <div className="flex flex-col items-center gap-2 text-slate-700">
-            <Check className="w-9 h-9 text-green-500" />
+            <Check className="h-9 w-9 text-green-500" />
             <span className="text-lg font-bold">{name}</span>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 text-slate-400">
-            <QrCode className="w-10 h-10" />
+            <QrCode className="h-10 w-10" />
             <span className="text-sm font-medium">ชื่อผู้ตรวจ</span>
           </div>
         )}
@@ -43,9 +43,9 @@ export default function NameScanner({ name, onNameChange }: NameScannerProps) {
         <button
           type="button"
           onClick={() => setScanOpen(true)}
-          className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold text-slate-700 bg-white active:bg-slate-50 min-h-[48px]"
+          className="flex min-h-[48px] flex-1 items-center justify-center gap-2 bg-white py-3 text-sm font-semibold text-slate-700 active:bg-slate-50"
         >
-          <ScanLine className="w-5 h-5" />
+          <ScanLine className="h-5 w-5" />
           {name ? "สแกนใหม่" : "สแกนชื่อ"}
         </button>
 
@@ -56,16 +56,16 @@ export default function NameScanner({ name, onNameChange }: NameScannerProps) {
               onNameChange("");
               setError(null);
             }}
-            className="flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-red-500 bg-white active:bg-slate-50 min-h-[48px] border-l-2 border-slate-200"
+            className="flex min-h-[48px] items-center justify-center gap-2 border-l-2 border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-red-500 active:bg-slate-50"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
             ล้าง
           </button>
         )}
       </div>
 
       {error && (
-        <div className="px-3 py-2 border-t-2 border-slate-200 text-center">
+        <div className="border-t-2 border-slate-200 px-3 py-2 text-center">
           <p className="text-xs text-red-500">{error}</p>
         </div>
       )}
