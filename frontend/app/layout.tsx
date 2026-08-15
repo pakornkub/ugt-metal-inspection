@@ -8,12 +8,12 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Box Inspection",
-  description: "Industrial box inspection system for iPad",
+  title: "UGT Metal Inspection",
+  description: "Industrial metal box inspection system for iPad",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Box Inspection",
+    title: "UGT Metal Inspection",
   },
 };
 

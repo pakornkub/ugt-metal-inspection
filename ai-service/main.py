@@ -8,7 +8,7 @@ from predictor import BoxLockPredictor
 AI_MOCK = os.getenv("AI_MOCK", "true").lower() == "true"
 MODEL_PATH = os.getenv("MODEL_PATH", "models/box_lock_model.pt")
 
-app = FastAPI(title="Box Inspection AI Service", version="1.0.0")
+app = FastAPI(title="UGT Metal Inspection AI Service", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

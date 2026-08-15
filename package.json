@@ -1,5 +1,5 @@
 {
-  "name": "box-inspection",
+  "name": "ugt-metal-inspection",
   "private": true,
   "scripts": {
     "dev:frontend": "npm run dev --prefix frontend",

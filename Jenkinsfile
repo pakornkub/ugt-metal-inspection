@@ -177,8 +177,8 @@ pipeline {
                 script {
                     def br        = (env.BRANCH_NAME ?: env.GIT_BRANCH?.tokenize('/')?.last())
                     def isProd    = (br == 'main')
-                    def sonarKey  = isProd ? 'box-inspection'     : 'box-inspection-dev'
-                    def sonarName = isProd ? 'Box Inspection System' : 'Box Inspection System (Dev)'
+                    def sonarKey  = isProd ? 'ugt-metal-inspection'     : 'ugt-metal-inspection-dev'
+                    def sonarName = isProd ? 'UGT Metal Inspection System' : 'UGT Metal Inspection System (Dev)'
                     withSonarQubeEnv('SonarQube') {
                         sh "${tool('SonarQube-Scanner')}/bin/sonar-scanner -Dsonar.projectKey=${sonarKey} -Dsonar.projectName='${sonarName}'"
                     }
@@ -221,7 +221,7 @@ pipeline {
 
                     def suffix = isProd ? '' : '-dev'
                     for (svc in ['frontend', 'backend', 'ai']) {
-                        sh "docker tag box-inspection-${svc}${suffix}:${buildNum} box-inspection-${svc}${suffix}:latest"
+                        sh "docker tag ugt-metal-inspection-${svc}${suffix}:${buildNum} ugt-metal-inspection-${svc}${suffix}:latest"
                     }
                 }
             }
@@ -239,9 +239,9 @@ pipeline {
                 script {
                     def br            = (env.BRANCH_NAME ?: env.GIT_BRANCH?.tokenize('/')?.last())
                     def isProd        = (br == 'main')
-                    def envCredId     = isProd ? 'env-box-inspection'     : 'env-box-inspection-dev'
-                    def composeFile   = isProd ? 'docker-compose.yml'     : 'docker-compose.dev.yml'
-                    def appdataDir    = isProd ? 'box-inspection'         : 'box-inspection-dev'
+                    def envCredId     = isProd ? 'env-ugt-metal-inspection'     : 'env-ugt-metal-inspection-dev'
+                    def composeFile   = isProd ? 'docker-compose.yml'           : 'docker-compose.dev.yml'
+                    def appdataDir    = isProd ? 'ugt-metal-inspection'         : 'ugt-metal-inspection-dev'
                     def buildNum      = env.BUILD_NUMBER
 
                     withCredentials([file(credentialsId: envCredId, variable: 'ENV_FILE')]) {
@@ -252,9 +252,8 @@ pipeline {
                         // start, and both are idempotent (see prisma/seed.ts).
 
                         // [VOLUME] uploads — first-run path prep (idempotent).
-                        // mssql uses a Docker-managed named volume instead
-                        // (see docker-compose.yml comment), so it needs none
-                        // of this.
+                        // SQL Server is external (not a container here), so
+                        // there's no [VOLUME]/named-volume prep needed for it.
                         sh """
                           if [ ! -d /srv/appdata/${appdataDir}/uploads ]; then
                             mkdir -p /srv/appdata/${appdataDir}/uploads
@@ -267,7 +266,7 @@ pipeline {
                         // so the result matches each container's HEALTHCHECK.
                         def suffix = isProd ? '' : '-dev'
                         for (svc in ['frontend', 'backend', 'ai']) {
-                            def containerName = "box-inspection-${svc}${suffix}"
+                            def containerName = "ugt-metal-inspection-${svc}${suffix}"
                             sh """
                               echo "Waiting for ${containerName} to become healthy..."
                               for i in \$(seq 1 24); do

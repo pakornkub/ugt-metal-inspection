@@ -28,15 +28,15 @@ router.get("/", async (req, res) => {
   );
 
   const where = {
-    ...(lotNo ? { lot_no: { contains: lotNo } } : {}),
-    ...(caseNo ? { case_no: { contains: caseNo } } : {}),
+    ...(lotNo ? { lotNo: { contains: lotNo } } : {}),
+    ...(caseNo ? { caseNo: { contains: caseNo } } : {}),
   };
 
   try {
     const [records, total] = await Promise.all([
       prisma.boxInspection.findMany({
         where,
-        orderBy: { created_at: "desc" },
+        orderBy: { createdAt: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
@@ -44,22 +44,24 @@ router.get("/", async (req, res) => {
     ]);
 
     res.json({
+      // API wire format stays snake_case (unchanged contract with frontend) —
+      // only the underlying Prisma/DB column names are PascalCase now.
       data: records.map((r) => ({
         id: r.id.toString(),
         name: r.name,
-        lot_no: r.lot_no,
-        case_no: r.case_no,
-        box_type: r.box_type,
-        image_1: r.image_1,
-        result_1: r.result_1,
-        image_2: r.image_2,
-        result_2: r.result_2,
-        image_3: r.image_3,
-        result_3: r.result_3,
-        image_4: r.image_4,
-        result_4: r.result_4,
-        overall_result: r.overall_result,
-        created_at: r.created_at,
+        lot_no: r.lotNo,
+        case_no: r.caseNo,
+        box_type: r.boxType,
+        image_1: r.image1,
+        result_1: r.result1,
+        image_2: r.image2,
+        result_2: r.result2,
+        image_3: r.image3,
+        result_3: r.result3,
+        image_4: r.image4,
+        result_4: r.result4,
+        overall_result: r.overallResult,
+        created_at: r.createdAt,
       })),
       total,
       page,
@@ -150,29 +152,29 @@ router.post("/", async (req, res) => {
     const record = await prisma.boxInspection.create({
       data: {
         name: name.trim(),
-        lot_no: lot_no!.trim(),
-        case_no: case_no!.trim(),
-        box_type: box_type.trim(),
-        image_1: images[0].path,
-        result_1: images[0].result,
-        image_2: images[1].path,
-        result_2: images[1].result,
-        image_3: images[2].path,
-        result_3: images[2].result,
-        image_4: images[3].path,
-        result_4: images[3].result,
-        overall_result,
+        lotNo: lot_no!.trim(),
+        caseNo: case_no!.trim(),
+        boxType: box_type.trim(),
+        image1: images[0].path,
+        result1: images[0].result,
+        image2: images[1].path,
+        result2: images[1].result,
+        image3: images[2].path,
+        result3: images[2].result,
+        image4: images[3].path,
+        result4: images[3].result,
+        overallResult: overall_result,
       },
     });
 
     res.status(201).json({
       id: record.id.toString(),
       name: record.name,
-      lot_no: record.lot_no,
-      case_no: record.case_no,
-      box_type: record.box_type,
-      overall_result: record.overall_result,
-      created_at: record.created_at,
+      lot_no: record.lotNo,
+      case_no: record.caseNo,
+      box_type: record.boxType,
+      overall_result: record.overallResult,
+      created_at: record.createdAt,
     });
   } catch (error) {
     console.error("Failed to save inspection:", error);

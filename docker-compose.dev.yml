@@ -2,34 +2,11 @@
 # docker-compose.yml with -dev names, offset host ports, and a separate DB so
 # dev data never touches prod. Local run: `docker compose -f docker-compose.dev.yml --env-file .env.dev up --build`.
 services:
-  mssql:
-    image: mcr.microsoft.com/mssql/server:2017-latest
-    container_name: box-inspection-mssql-dev
-    environment:
-      SA_PASSWORD: "${DB_PASSWORD:-YourStrong!Passw0rd}"
-      ACCEPT_EULA: "Y"
-      MSSQL_PID: "Express"
-    ports:
-      - "${DB_PORT:-1443}:1433"
-    volumes:
-      # ponytail: named volume — see docker-compose.yml for why mssql is the
-      # one exception to the /srv/appdata bind-mount contract.
-      - mssql_data_dev:/var/opt/mssql
-    healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P '${DB_PASSWORD:-YourStrong!Passw0rd}' -Q 'SELECT 1' || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    restart: unless-stopped
-    networks:
-      - box-inspection-dev-net
-
   ai-service:
     build: ./ai-service
-    image: box-inspection-ai-dev:${TAG:-latest}
+    image: ugt-metal-inspection-ai-dev:${TAG:-latest}
     pull_policy: never
-    container_name: box-inspection-ai-dev
+    container_name: ugt-metal-inspection-ai-dev
     ports:
       - "${AI_PORT:-8010}:8000"
     environment:
@@ -46,22 +23,25 @@ services:
       start_period: 30s
     restart: unless-stopped
     networks:
-      - box-inspection-dev-net
+      - proxy-network
 
   backend:
     build: ./backend
-    image: box-inspection-backend-dev:${TAG:-latest}
+    image: ugt-metal-inspection-backend-dev:${TAG:-latest}
     pull_policy: never
-    container_name: box-inspection-backend-dev
+    container_name: ugt-metal-inspection-backend-dev
     ports:
       - "${BACKEND_PORT:-3111}:3101"
     environment:
-      DATABASE_URL: "sqlserver://mssql:1433;database=box_inspection_dev;user=sa;password=${DB_PASSWORD:-YourStrong!Passw0rd};encrypt=false;trustServerCertificate=true"
+      # DATABASE_URL points at the org's existing SQL Server (a separate dev
+      # database from prod) — supplied via the env-ugt-metal-inspection-dev Jenkins
+      # credential (.env.dev), never hardcoded here.
+      DATABASE_URL: "${DATABASE_URL}"
       PORT: "3101"
       AI_SERVICE_URL: "http://ai-service:8000"
       UPLOAD_DIR: "uploads"
     volumes:
-      - /srv/appdata/box-inspection-dev/uploads:/app/uploads
+      - /srv/appdata/ugt-metal-inspection-dev/uploads:/app/uploads
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3101/health || exit 1"]
       interval: 30s
@@ -69,13 +49,11 @@ services:
       retries: 5
       start_period: 30s
     depends_on:
-      mssql:
-        condition: service_healthy
       ai-service:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - box-inspection-dev-net
+      - proxy-network
 
   frontend:
     build:
@@ -84,9 +62,9 @@ services:
         BACKEND_URL: "http://backend:3101"
         NEXT_PUBLIC_BASE_PATH: "${NEXT_PUBLIC_BASE_PATH:-/ugt-metal-inspection-dev}"
         NEXT_PUBLIC_APP_URL: "${NEXT_PUBLIC_APP_URL:-https://ugtweb.ube.co.th/ugt-metal-inspection-dev}"
-    image: box-inspection-frontend-dev:${TAG:-latest}
+    image: ugt-metal-inspection-frontend-dev:${TAG:-latest}
     pull_policy: never
-    container_name: box-inspection-frontend-dev
+    container_name: ugt-metal-inspection-frontend-dev
     ports:
       - "${FRONTEND_PORT:-3110}:3100"
     environment:
@@ -102,12 +80,8 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - box-inspection-dev-net
-
-volumes:
-  mssql_data_dev:
-    name: box-inspection-mssql-dev-data
+      - proxy-network
 
 networks:
-  box-inspection-dev-net:
-    name: box-inspection-dev-network
+  proxy-network:
+    external: true

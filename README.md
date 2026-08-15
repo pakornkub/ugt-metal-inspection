@@ -1,4 +1,4 @@
-# Industrial Box Inspection System
+# UGT Metal Inspection System
 
 Web application for factory production line box inspection using QR scanning, multi-angle image capture, and AI classification (LOCK/UNLOCK).
 
@@ -9,12 +9,12 @@ Web application for factory production line box inspection using QR scanning, mu
 | Frontend | 3100 | Next.js + Tailwind CSS |
 | Backend | 3101 | Express + Prisma |
 | AI Service | 8000 | Python FastAPI |
-| Database | 1433 | Microsoft SQL Server |
+| Database | — | Microsoft SQL Server (existing org server, not part of this compose) |
 
 ```
 iPad → Frontend → Backend → AI Service
                       ↓
-                    MSSQL
+                MSSQL (external — provisioned by IT, not a container here)
 ```
 
 ## Quick Start (Local Development)
@@ -23,15 +23,15 @@ iPad → Frontend → Backend → AI Service
 
 - Node.js 20+
 - Python 3.11+
-- Docker Desktop (for MSSQL)
+- Docker Desktop (for AI Service)
+- Access to a SQL Server instance (dev DB — ask admin, or point at a local
+  SQL Server you already have) — `DATABASE_URL` in `backend/.env`
 
-### 1. Start Database + AI Service (Docker)
+### 1. Start AI Service (Docker)
 
 ```bash
-docker compose up mssql ai-service -d
+docker compose up ai-service -d
 ```
-
-Wait ~30 seconds for MSSQL to become healthy.
 
 ### 2. Backend
 
@@ -98,7 +98,9 @@ API calls go through Next.js proxy (`/api/*` → backend) — no separate backen
 docker compose up --build
 ```
 
-Runs everything — MSSQL, AI service, backend, and frontend — in containers on a shared Docker network. Open http://localhost:3100.
+Runs AI service, backend, and frontend in containers on a shared Docker
+network — SQL Server is **not** part of this compose (see Architecture above);
+set a real `DATABASE_URL` in `.env` first. Open http://localhost:3100.
 
 ## API Endpoints
 
@@ -151,14 +153,14 @@ No frontend or backend changes needed.
 
 ## Database Schema
 
-**box_types** — dropdown options (seeded: Type A, B, C)
+**BoxTypes** — dropdown options (seeded: Gps5, Cimc, Gp1, Nikken, Eneos, Anqing)
 
-**box_inspection** — inspection records with 4 images, 4 results, overall PASS/FAIL
+**BoxInspections** — inspection records with 4 images, 4 results, overall PASS/FAIL
 
 ## Project Structure
 
 ```
-TSL_AI/
+ugt-metal-inspection/
 ├── frontend/       Next.js iPad UI
 ├── backend/        Express REST API + Prisma
 ├── ai-service/     Python FastAPI inference
