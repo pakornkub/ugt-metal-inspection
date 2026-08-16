@@ -125,3 +125,17 @@
   `GIT_BRANCH` (เช่น `origin/main`) คือค่าที่ Pipeline job ธรรมดาตั้งให้เอง
   (ต่าง Multibranch ที่ตั้ง `BRANCH_NAME` แทน) — แก้แค่ `docs/admin-handoff.md`
   §1.2 ให้สอนสร้าง 2 job + §1.3 อธิบายว่า webhook เดียวใช้ร่วมกันได้
+- 2026-08-16 ทุก bind mount ใน `docker-compose.yml`/`.dev.yml` ต้องเป็น
+  **absolute `/srv/appdata/...` path เท่านั้น ห้าม relative path** — ย้าย
+  `ai-service`'s `./ai-service/models:/app/models` (relative) เป็น
+  `/srv/appdata/<project>(-dev)/models` (absolute) — **because** เจอจริงจาก
+  `docker compose up` ที่ Deploy stage fail ด้วย DooD bug เดียวกับที่เจอใน AI
+  lint stage ก่อนหน้า (Jenkins คุยกับ host Docker daemon ผ่าน `docker.sock`,
+  relative path resolve ผิดไปเป็น path ข้างใน container ของ Jenkins เอง) ·
+  rejected: ลบ volume ทิ้งแล้ว COPY โมเดลเข้า image ตอน build แทน (ไฟล์โมเดล
+  ใหญ่และถูก `.gitignore` ไว้โดยตั้งใจ ไม่อยากให้ต้อง rebuild image ทุกครั้งที่
+  เปลี่ยนโมเดล) — เพิ่ม `mkdir -p .../models` ใน Jenkinsfile Deploy stage +
+  เตือนชัดเจนใน `docs/admin-handoff.md` §3 ว่าต้องเอาไฟล์โมเดลไปวางเองก่อน
+  deploy ครั้งแรก ไม่งั้น ai-service crash loop ตั้งแต่ start (ไม่ fallback เป็น
+  mock ให้เอง เพราะ compose ตั้ง `AI_MOCK: "false"` ตายตัว) — รายละเอียดเต็ม →
+  `docs/project-context/troubleshooting.md`

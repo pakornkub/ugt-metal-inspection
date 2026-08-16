@@ -143,17 +143,39 @@ location /ugt-metal-inspection-dev {
 
 ## 3. Server — persistent data path
 
+> **สำคัญมาก**: คำสั่งข้างล่างต้องรันบน **Docker host จริง** เท่านั้น —
+> **ไม่ใช่** เข้าไปรันข้างใน Jenkins container เอง (เช่นผ่าน `docker exec -it
+> jenkins bash`) เพราะ Jenkins รันอยู่ใน container ของตัวเองแยกจาก host แต่คุย
+> กับ Docker daemon ของ host ผ่าน `docker.sock` (Docker-outside-of-Docker) —
+> ถ้าสร้าง `/srv/appdata` ข้างใน container ของ Jenkins จะดูเหมือนใช้ได้แต่จริง ๆ
+> deploy จะ fail ด้วย error ประมาณ `mkdir /var/jenkins_home: read-only file
+> system` (เจอมาแล้วจริงระหว่างทดสอบ — ดู `docs/project-context/troubleshooting.md`)
+
 Deploy stage สร้าง path ย่อยเองอัตโนมัติ (idempotent) แต่ `/srv/appdata` เองต้องมีสิทธิ์
-ให้ Jenkins เขียนได้ตั้งแต่ต้น (ครั้งแรกของ server เท่านั้น):
+ให้ Jenkins เขียนได้ตั้งแต่ต้น (ครั้งแรกของ server เท่านั้น) — SSH เข้า host จริงแล้วรัน:
 
 ```bash
 sudo mkdir -p /srv/appdata && sudo chown jenkins:jenkins /srv/appdata
 ```
 
-ข้อมูลที่ persist ข้าม deploy ใต้ path นี้: `uploads` (รูปถ่ายกล่องที่ inspector อัปโหลด)
-ทั้ง prod (`/srv/appdata/ugt-metal-inspection/uploads`) และ dev
-(`/srv/appdata/ugt-metal-inspection-dev/uploads`) — SQL Server ไม่เกี่ยวกับ path นี้เลย
-เพราะไม่ได้รันเป็น container ในระบบนี้ (ดูข้อ 4)
+ข้อมูลที่ persist ข้าม deploy ใต้ path นี้ (ทุก path ต้องเป็น **absolute path บน
+host จริง** — ห้ามใช้ relative path ในทุก compose ไฟล์ ด้วยเหตุผลเดียวกับข้อบนสุด):
+
+| อะไร | prod | dev | ใครเติมข้อมูล |
+| --- | --- | --- | --- |
+| `uploads` (รูปที่ inspector อัปโหลด) | `/srv/appdata/ugt-metal-inspection/uploads` | `/srv/appdata/ugt-metal-inspection-dev/uploads` | แอปเขียนเอง อัตโนมัติ |
+| `models` (โมเดล YOLO ที่เทรนแล้ว) | `/srv/appdata/ugt-metal-inspection/models` | `/srv/appdata/ugt-metal-inspection-dev/models` | **ทีมพัฒนา/ML ต้องเอาไฟล์ `.pt`/`.onnx` ไปวางเอง** (ไฟล์นี้ไม่อยู่ใน git — `.gitignore` กันไว้เพราะไฟล์ใหญ่) |
+
+Deploy stage สร้างแค่โฟลเดอร์เปล่าให้ทั้งสอง path (`mkdir -p`) — **`models` จะว่าง
+เปล่าจนกว่าจะมีคนเอาไฟล์โมเดลจริงไปวาง และนั่นเป็นปัญหาจริง ไม่ใช่แค่เตือนเฉย ๆ**:
+compose ตั้ง `AI_MOCK: "false"` ตายตัว ai-service จะพยายามโหลดโมเดลจริงจาก
+`MODEL_PATH` (`models/box_lock_model.pt`) **ทันทีตอน container start** ถ้าไม่เจอ
+ไฟล์ → `FileNotFoundError` → container **crash ทันทีตั้งแต่ก่อนเริ่ม serve**
+(ไม่ fallback ไป mock ให้เองอัตโนมัติ) แล้ว restart วนตาม `restart:
+unless-stopped` ไปเรื่อย ๆ ไม่มีวันขึ้น healthy — **ต้องเอาไฟล์โมเดล (`.pt`/
+`.onnx`) ไปวางใน path ข้างบนก่อน deploy ครั้งแรกเสมอ** ไม่งั้น ai-service (และ
+backend ที่ depends_on รอมันอยู่) จะไม่มีวัน healthy — SQL Server ไม่เกี่ยวกับ
+path เหล่านี้เลยเพราะไม่ได้รันเป็น container ในระบบนี้ (ดูข้อ 4)
 
 **Docker network**: ทุก container (prod และ dev) ต่อ external network ชื่อ
 `proxy-network` — ต้องมีอยู่แล้วบน Docker host **ก่อน** deploy ครั้งแรก ไม่งั้น
@@ -195,7 +217,8 @@ TABLE, INSERT/UPDATE/DELETE/SELECT) บน database ทั้งสองตั�
 | **→ `DATABASE_URL` dev (ข้อ 4)** | เหมือนกันแต่ database=UGT_MetalInspection_DEV | ค่าใส่ไว้แล้วใน `.env.dev` ที่ root — รอยืนยันเช่นกัน |
 | ยืนยัน Jenkins job ทั้ง 2 อันสร้างแล้ว | ลิงก์ job prod + dev | |
 | ยืนยัน SonarQube projects + webhook แล้ว | ลิงก์ project | |
-| ยืนยัน `/srv/appdata` เตรียมแล้ว | — | |
+| ยืนยัน `/srv/appdata` เตรียมแล้ว **บน host จริง** (ไม่ใช่ใน Jenkins container) | — | |
+| ยืนยันวางไฟล์โมเดล (`.pt`/`.onnx`) แล้วทั้ง prod/dev | — | **จำเป็น — ai-service ไม่ขึ้น healthy ถ้าไม่มี** |
 | ยืนยัน nginx location block ตั้งแล้วทั้ง prod/dev | — | |
 
 ## เช็คก่อนปิดงาน (ฝั่ง Admin)
@@ -207,6 +230,8 @@ TABLE, INSERT/UPDATE/DELETE/SELECT) บน database ทั้งสองตั�
 - [ ] nginx location block ทั้ง `/ugt-metal-inspection` และ `/ugt-metal-inspection-dev` ตั้งแล้ว ทดสอบเข้าได้จริง
 - [ ] `UGT_MetalInspection` (prod) และ `UGT_MetalInspection_DEV` (dev) สร้างแล้วบน SQL Server `10.1.0.22`
 - [ ] `proxy-network` มีอยู่แล้วบน Docker host (`docker network ls | grep proxy-network`)
+- [ ] `/srv/appdata` เตรียมบน **host จริง** (ไม่ใช่ข้างใน Jenkins container) — เช็คว่า `sudo ls -la /srv/appdata` รันบน host เจอ owner `jenkins`
+- [ ] ไฟล์โมเดล (`.pt`/`.onnx`) วางไว้แล้วที่ `/srv/appdata/ugt-metal-inspection(-dev)/models` ทั้ง prod/dev — ไม่งั้น ai-service ไม่มีวัน healthy
 
 ---
 

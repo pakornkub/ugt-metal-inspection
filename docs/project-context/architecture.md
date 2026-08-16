@@ -68,3 +68,11 @@
   Prisma 6 classic pattern อยู่แล้ว ทำงานได้ปกติไม่ต้องมี adapter, การย้ายทั้งระบบ
   ไปใช้ adapter pattern (+ `@t3-oss/env-nextjs` ซึ่งเป็นของ Next.js ล้วน ใช้กับ
   Express ตรง ๆ ไม่ได้ด้วย) เป็นงานใหญ่เกินขอบเขตที่ขอ (ปรับแค่ naming ของคอลัมน์)
+- **Jenkins รันแบบ Docker-outside-of-Docker (DooD)** — Jenkins เองอยู่ใน container
+  แต่คุยกับ Docker daemon ของ **host จริง** ผ่าน `docker.sock` — ผลตาม: **ทุก
+  bind mount ใน `docker-compose.yml`/`.dev.yml` ต้องเป็น absolute
+  `/srv/appdata/...` path เท่านั้น ห้าม relative path เด็ดขาด** (relative path
+  resolve ผิดไปเป็น path ข้างใน container ของ Jenkins เอง ไม่ใช่ host จริง — เจอ
+  มาแล้วทั้งกับ AI lint stage และ `ai-service`'s `models` volume, ดู
+  `docs/project-context/troubleshooting.md`) และ `/srv/appdata` ต้องถูกเตรียม
+  โดย SSH เข้า **host จริง** เท่านั้น ไม่ใช่ `docker exec` เข้า Jenkins container

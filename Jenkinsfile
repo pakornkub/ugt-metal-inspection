@@ -270,13 +270,16 @@ EOF
                         // runs `prisma db push && prisma db seed` on every
                         // start, and both are idempotent (see prisma/seed.ts).
 
-                        // [VOLUME] uploads — first-run path prep (idempotent).
-                        // SQL Server is external (not a container here), so
-                        // there's no [VOLUME]/named-volume prep needed for it.
+                        // [VOLUME] uploads + models — first-run path prep
+                        // (idempotent). SQL Server is external (not a
+                        // container here), so there's no [VOLUME]/named-volume
+                        // prep needed for it. `models` must actually be
+                        // populated with the trained model file by
+                        // admin/DBA/ops — this only creates the empty dir so
+                        // the bind mount has somewhere to attach to.
                         sh """
-                          if [ ! -d /srv/appdata/${appdataDir}/uploads ]; then
-                            mkdir -p /srv/appdata/${appdataDir}/uploads
-                          fi
+                          mkdir -p /srv/appdata/${appdataDir}/uploads
+                          mkdir -p /srv/appdata/${appdataDir}/models
                         """
 
                         sh "TAG=${buildNum} docker compose -f ${composeFile} up -d --no-build"

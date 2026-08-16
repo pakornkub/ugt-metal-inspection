@@ -14,7 +14,9 @@ services:
       MODEL_PATH: "models/box_lock_model.pt"
       AI_CONF_THRESHOLD: "0.25"
     volumes:
-      - ./ai-service/models:/app/models
+      # Absolute /srv/appdata path — see docker-compose.yml comment (DooD:
+      # relative paths resolve against Jenkins' own container, not the host).
+      - /srv/appdata/ugt-metal-inspection-dev/models:/app/models
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
       interval: 30s
