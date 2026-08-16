@@ -20,7 +20,7 @@
 | --- | --- | --- | --- |
 | 1 | Jenkins | สร้าง credentials 2 ตัว + Pipeline job 2 อัน (prod/dev แยกกัน) + webhook + จัดสรร port 6 ช่อง (3 prod + 3 dev) | ~20 นาที |
 | 2 | SonarQube | สร้าง 2 projects + ผูก Quality Gate + webhook | ~10 นาที |
-| 3 | Server | เตรียม `/srv/appdata` (ครั้งแรกของ server เท่านั้น) | ~5 นาที |
+| 3 | Server | เตรียม `/home/docker02/appdata` (server นี้ใช้ path นี้แทน `/srv/appdata` มาตรฐาน — ดูเหตุผลในข้อ 3) | ~5 นาที |
 | 4 | Database | สร้าง database เปล่า 2 ตัว (prod/dev) บน SQL Server ที่มีอยู่แล้ว + ส่ง connection string กลับ | ~10 นาที |
 
 <!-- ไม่มี Sentry / ไม่มี SSO (Keycloak) ในโปรเจคนี้ — ตัดหัวข้อทิ้งแล้ว -->
@@ -146,25 +146,33 @@ location /ugt-metal-inspection-dev {
 > **สำคัญมาก**: คำสั่งข้างล่างต้องรันบน **Docker host จริง** เท่านั้น —
 > **ไม่ใช่** เข้าไปรันข้างใน Jenkins container เอง (เช่นผ่าน `docker exec -it
 > jenkins bash`) เพราะ Jenkins รันอยู่ใน container ของตัวเองแยกจาก host แต่คุย
-> กับ Docker daemon ของ host ผ่าน `docker.sock` (Docker-outside-of-Docker) —
-> ถ้าสร้าง `/srv/appdata` ข้างใน container ของ Jenkins จะดูเหมือนใช้ได้แต่จริง ๆ
-> deploy จะ fail ด้วย error ประมาณ `mkdir /var/jenkins_home: read-only file
-> system` (เจอมาแล้วจริงระหว่างทดสอบ — ดู `docs/project-context/troubleshooting.md`)
+> กับ Docker daemon ของ host ผ่าน `docker.sock` (Docker-outside-of-Docker)
 
-Deploy stage สร้าง path ย่อยเองอัตโนมัติ (idempotent) แต่ `/srv/appdata` เองต้องมีสิทธิ์
-ให้ Jenkins เขียนได้ตั้งแต่ต้น (ครั้งแรกของ server เท่านั้น) — SSH เข้า host จริงแล้วรัน:
+> **⚠ เบี่ยงจากมาตรฐานองค์กร (เฉพาะ server นี้)**: ปกติ path มาตรฐานคือ
+> `/srv/appdata/...` แต่ server นี้ (`docker02`) ติดตั้ง Docker ผ่าน **Snap**
+> ซึ่ง AppArmor confinement ของ snap docker บล็อกไม่ให้เข้าถึง `/srv` ได้เลย
+> (อนุญาตแค่ `$HOME`/`/mnt`/`/media`) — เจอ error `read-only file system` ทั้งที่
+> filesystem จริงเขียนได้ปกติ (พิสูจน์แล้วด้วย `docker run -v /srv/...` fail
+> แต่ `sudo touch` ตรง ๆ ผ่าน — เจอมาแล้วจริงตอนทดสอบ) จึงใช้
+> **`/home/docker02/appdata/...`** แทนบน server นี้โดยเฉพาะ — รายละเอียดเต็ม →
+> `docs/project-context/troubleshooting.md` + `decisions.md`
+>
+> **แก้ที่ต้นเหตุจริง ๆ (แนะนำถ้ามีเวลา)**: ถอด snap docker ออกแล้วติดตั้ง
+> `docker-ce` ตามคู่มือทางการแทน (https://docs.docker.com/engine/install/ubuntu/)
+> จะได้ใช้ `/srv/appdata` ตามมาตรฐานองค์กรได้ปกติเหมือนโปรเจคอื่น ไม่ผูกกับ
+> user account `docker02` เฉพาะเจาะจงแบบนี้
 
-```bash
-sudo mkdir -p /srv/appdata && sudo chown jenkins:jenkins /srv/appdata
-```
+Deploy stage สร้าง path ย่อยเองอัตโนมัติ (idempotent) — path ฐาน
+(`/home/docker02/appdata`) มีอยู่แล้ว (owner `docker02` เอง จึงไม่ต้อง `chown`
+เพิ่ม เพราะ Jenkins agent รันคำสั่งในฐานะ user เดียวกันนี้อยู่แล้ว)
 
 ข้อมูลที่ persist ข้าม deploy ใต้ path นี้ (ทุก path ต้องเป็น **absolute path บน
 host จริง** — ห้ามใช้ relative path ในทุก compose ไฟล์ ด้วยเหตุผลเดียวกับข้อบนสุด):
 
 | อะไร | prod | dev | ใครเติมข้อมูล |
 | --- | --- | --- | --- |
-| `uploads` (รูปที่ inspector อัปโหลด) | `/srv/appdata/ugt-metal-inspection/uploads` | `/srv/appdata/ugt-metal-inspection-dev/uploads` | แอปเขียนเอง อัตโนมัติ |
-| `models` (โมเดล YOLO ที่เทรนแล้ว) | `/srv/appdata/ugt-metal-inspection/models` | `/srv/appdata/ugt-metal-inspection-dev/models` | **ทีมพัฒนา/ML ต้องเอาไฟล์ `.pt`/`.onnx` ไปวางเอง** (ไฟล์นี้ไม่อยู่ใน git — `.gitignore` กันไว้เพราะไฟล์ใหญ่) |
+| `uploads` (รูปที่ inspector อัปโหลด) | `/home/docker02/appdata/ugt-metal-inspection/uploads` | `/home/docker02/appdata/ugt-metal-inspection-dev/uploads` | แอปเขียนเอง อัตโนมัติ |
+| `models` (โมเดล YOLO ที่เทรนแล้ว) | `/home/docker02/appdata/ugt-metal-inspection/models` | `/home/docker02/appdata/ugt-metal-inspection-dev/models` | **ทีมพัฒนา/ML ต้องเอาไฟล์ `.pt`/`.onnx` ไปวางเอง** (ไฟล์นี้ไม่อยู่ใน git — `.gitignore` กันไว้เพราะไฟล์ใหญ่) |
 
 Deploy stage สร้างแค่โฟลเดอร์เปล่าให้ทั้งสอง path (`mkdir -p`) — **`models` จะว่าง
 เปล่าจนกว่าจะมีคนเอาไฟล์โมเดลจริงไปวาง และนั่นเป็นปัญหาจริง ไม่ใช่แค่เตือนเฉย ๆ**:
@@ -217,7 +225,7 @@ TABLE, INSERT/UPDATE/DELETE/SELECT) บน database ทั้งสองตั�
 | **→ `DATABASE_URL` dev (ข้อ 4)** | เหมือนกันแต่ database=UGT_MetalInspection_DEV | ค่าใส่ไว้แล้วใน `.env.dev` ที่ root — รอยืนยันเช่นกัน |
 | ยืนยัน Jenkins job ทั้ง 2 อันสร้างแล้ว | ลิงก์ job prod + dev | |
 | ยืนยัน SonarQube projects + webhook แล้ว | ลิงก์ project | |
-| ยืนยัน `/srv/appdata` เตรียมแล้ว **บน host จริง** (ไม่ใช่ใน Jenkins container) | — | |
+| ยืนยัน `/home/docker02/appdata` เตรียมแล้ว **บน host จริง** (ไม่ใช่ใน Jenkins container) | — | |
 | ยืนยันวางไฟล์โมเดล (`.pt`/`.onnx`) แล้วทั้ง prod/dev | — | **จำเป็น — ai-service ไม่ขึ้น healthy ถ้าไม่มี** |
 | ยืนยัน nginx location block ตั้งแล้วทั้ง prod/dev | — | |
 
@@ -230,8 +238,8 @@ TABLE, INSERT/UPDATE/DELETE/SELECT) บน database ทั้งสองตั�
 - [ ] nginx location block ทั้ง `/ugt-metal-inspection` และ `/ugt-metal-inspection-dev` ตั้งแล้ว ทดสอบเข้าได้จริง
 - [ ] `UGT_MetalInspection` (prod) และ `UGT_MetalInspection_DEV` (dev) สร้างแล้วบน SQL Server `10.1.0.22`
 - [ ] `proxy-network` มีอยู่แล้วบน Docker host (`docker network ls | grep proxy-network`)
-- [ ] `/srv/appdata` เตรียมบน **host จริง** (ไม่ใช่ข้างใน Jenkins container) — เช็คว่า `sudo ls -la /srv/appdata` รันบน host เจอ owner `jenkins`
-- [ ] ไฟล์โมเดล (`.pt`/`.onnx`) วางไว้แล้วที่ `/srv/appdata/ugt-metal-inspection(-dev)/models` ทั้ง prod/dev — ไม่งั้น ai-service ไม่มีวัน healthy
+- [ ] `/home/docker02/appdata` เตรียมบน **host จริง** (ไม่ใช่ข้างใน Jenkins container) — เช็คว่า `ls -la /home/docker02/appdata` รันบน host เจอจริง
+- [ ] ไฟล์โมเดล (`.pt`/`.onnx`) วางไว้แล้วที่ `/home/docker02/appdata/ugt-metal-inspection(-dev)/models` ทั้ง prod/dev — ไม่งั้น ai-service ไม่มีวัน healthy
 
 ---
 
@@ -249,4 +257,7 @@ TABLE, INSERT/UPDATE/DELETE/SELECT) บน database ทั้งสองตั�
 - SonarQube server ชื่อ `SonarQube` ผูกไว้ใน Manage Jenkins → System → SonarQube servers
 - สร้าง org Quality Gate (`new_coverage >= 60`, `new_violations = 0`,
   `new_duplicated_lines_density <= 3`, `new_security_hotspots_reviewed = 100`)
-- `sudo mkdir -p /srv/appdata && sudo chown jenkins:jenkins /srv/appdata`
+- โปรเจคอื่นบน server ที่ใช้ Docker แบบทางการ (`docker-ce`, ไม่ใช่ snap):
+  `sudo mkdir -p /srv/appdata && sudo chown jenkins:jenkins /srv/appdata`
+  (server `docker02` นี้ใช้ snap docker — ใช้ `/home/docker02/appdata` แทน
+  ตามข้อ 3 ด้านบน ไม่ต้อง chown เพราะ user เดียวกับที่ Jenkins agent รันอยู่แล้ว)

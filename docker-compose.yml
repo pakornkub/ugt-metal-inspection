@@ -15,12 +15,15 @@ services:
       MODEL_PATH: "models/box_lock_model.pt"
       AI_CONF_THRESHOLD: "0.25"
     volumes:
-      # Absolute /srv/appdata path, NOT a relative repo path — Jenkins runs
-      # inside its own container talking to the HOST's Docker daemon (DooD);
-      # a relative path resolves against $PWD (Jenkins' own workspace, which
-      # doesn't exist on the real host) and fails the same way the uploads
-      # bind mount would if it weren't already absolute. See troubleshooting.md.
-      - /srv/appdata/ugt-metal-inspection/models:/app/models
+      # Absolute host path, NOT a relative repo path — Jenkins runs inside its
+      # own container talking to the HOST's Docker daemon (DooD); a relative
+      # path resolves against $PWD (Jenkins' own workspace, which doesn't
+      # exist on the real host) and fails the same way this would if it
+      # weren't already absolute.
+      # ponytail: /home/docker02/appdata, NOT the usual org /srv/appdata —
+      # this host's Docker is snap-installed, whose AppArmor confinement only
+      # allows $HOME/mnt/media, not /srv. See troubleshooting.md + decisions.md.
+      - /home/docker02/appdata/ugt-metal-inspection/models:/app/models
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
       interval: 30s
@@ -47,8 +50,9 @@ services:
       AI_SERVICE_URL: "http://ai-service:8000"
       UPLOAD_DIR: "uploads"
     volumes:
-      # ponytail: bind mount under /srv/appdata instead of a named volume
-      - /srv/appdata/ugt-metal-inspection/uploads:/app/uploads
+      # ponytail: /home/docker02/appdata, not /srv/appdata — see the models
+      # volume comment above (snap Docker confinement on this host).
+      - /home/docker02/appdata/ugt-metal-inspection/uploads:/app/uploads
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3101/health || exit 1"]
       interval: 30s

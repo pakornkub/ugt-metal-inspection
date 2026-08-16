@@ -70,9 +70,18 @@
   Express ตรง ๆ ไม่ได้ด้วย) เป็นงานใหญ่เกินขอบเขตที่ขอ (ปรับแค่ naming ของคอลัมน์)
 - **Jenkins รันแบบ Docker-outside-of-Docker (DooD)** — Jenkins เองอยู่ใน container
   แต่คุยกับ Docker daemon ของ **host จริง** ผ่าน `docker.sock` — ผลตาม: **ทุก
-  bind mount ใน `docker-compose.yml`/`.dev.yml` ต้องเป็น absolute
-  `/srv/appdata/...` path เท่านั้น ห้าม relative path เด็ดขาด** (relative path
-  resolve ผิดไปเป็น path ข้างใน container ของ Jenkins เอง ไม่ใช่ host จริง — เจอ
-  มาแล้วทั้งกับ AI lint stage และ `ai-service`'s `models` volume, ดู
-  `docs/project-context/troubleshooting.md`) และ `/srv/appdata` ต้องถูกเตรียม
-  โดย SSH เข้า **host จริง** เท่านั้น ไม่ใช่ `docker exec` เข้า Jenkins container
+  bind mount ใน `docker-compose.yml`/`.dev.yml` ต้องเป็น absolute path บน host
+  จริงเท่านั้น ห้าม relative path เด็ดขาด** (relative path resolve ผิดไปเป็น
+  path ข้างใน container ของ Jenkins เอง ไม่ใช่ host จริง — เจอมาแล้วทั้งกับ AI
+  lint stage และ `ai-service`'s `models` volume, ดู
+  `docs/project-context/troubleshooting.md`) และ path ฐานต้องถูกเตรียมโดย SSH
+  เข้า **host จริง** เท่านั้น ไม่ใช่ `docker exec` เข้า Jenkins container
+- **persistent-data path เป็น `/home/docker02/appdata/...` ไม่ใช่
+  `/srv/appdata/...` มาตรฐานองค์กร** — **because** Docker บน server deploy
+  (`docker02`) ติดตั้งผ่าน **Snap**, AppArmor confinement ของ snap docker บล็อก
+  ไม่ให้ daemon เข้าถึง `/srv` เลย (อนุญาตแค่ `$HOME`/`/mnt`/`/media`) ยืนยันด้วย
+  `docker run -v /srv/...` fail ด้วย "read-only file system" แต่ `sudo touch`
+  ตรง ๆ ผ่านปกติ (พิสูจน์ว่าไม่ใช่ปัญหา filesystem จริง) — เปลี่ยนมาใช้
+  `/home/docker02/appdata/<project>(-dev)/{uploads,models}` แทนเฉพาะ server นี้
+  · แก้ที่ต้นเหตุจริง (ยังไม่ได้ทำ): ถอด snap docker ติดตั้ง `docker-ce` ใหม่ —
+  รายละเอียดเต็ม → `docs/project-context/troubleshooting.md` + `decisions.md`

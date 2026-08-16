@@ -139,3 +139,22 @@
   deploy ครั้งแรก ไม่งั้น ai-service crash loop ตั้งแต่ start (ไม่ fallback เป็น
   mock ให้เอง เพราะ compose ตั้ง `AI_MOCK: "false"` ตายตัว) — รายละเอียดเต็ม →
   `docs/project-context/troubleshooting.md`
+  **[แก้ไขเพิ่มเติมโดยรายการถัดไป — เปลี่ยน base path จาก `/srv/appdata` เป็น
+  `/home/docker02/appdata` เพราะ snap docker บล็อก `/srv`]**
+- 2026-08-16 เปลี่ยน persistent-data path ทั้งหมดจาก `/srv/appdata/...`
+  (มาตรฐานองค์กร) เป็น **`/home/docker02/appdata/...`** เฉพาะ server deploy นี้
+  (`docker02`) — **because** พิสูจน์แล้วว่า `/srv` เข้าไม่ได้เลยแม้แก้เป็น
+  absolute path ถูกต้องแล้ว (รายการก่อนหน้า) เพราะ Docker บน server นี้ติดตั้ง
+  ผ่าน **Snap**, AppArmor confinement ของ snap docker บล็อก daemon ไม่ให้แตะ
+  `/srv` (อนุญาตแค่ `$HOME`/`/mnt`/`/media`) — ไล่ debug จนพิสูจน์ได้ชัด:
+  `sudo touch /srv/appdata/test.txt` ผ่านปกติ (filesystem จริงเขียนได้) แต่
+  `docker run --rm -v /srv/appdata:/test alpine touch ...` fail ด้วย
+  "read-only file system" เป๊ะแบบเดียวกับที่เจอใน pipeline — สรุปว่าไม่ใช่ปัญหา
+  disk/permission เลย เป็นเรื่อง snap confinement ล้วน ๆ · rejected: ถอด snap
+  docker ติดตั้ง `docker-ce` ใหม่ทันที (แก้ที่ต้นเหตุจริงกว่า และไม่ต้องผูก
+  deploy path กับ user account `docker02` เฉพาะเจาะจง) — ผู้ใช้เลือกย้าย path
+  ก่อนเพื่อให้ deploy ผ่านเร็วที่สุด ทิ้งการถอด snap ไว้เป็นงานแยกทีหลัง (ดู
+  `docs/admin-handoff.md` §3 มีคำแนะนำนี้ไว้แล้ว) — แก้ไฟล์: `docker-compose.yml`/
+  `.dev.yml` (volume paths ×4), `Jenkinsfile` (`mkdir -p` ×2),
+  `docs/admin-handoff.md` §3 เขียนใหม่ทั้งหมด (คำเตือนเบี่ยงมาตรฐาน + เหตุผล) —
+  รายละเอียดการ debug ทั้งหมด → `docs/project-context/troubleshooting.md`

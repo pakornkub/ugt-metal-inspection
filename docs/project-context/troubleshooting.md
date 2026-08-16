@@ -39,4 +39,29 @@
   never a relative repo path** — Jenkins-in-Docker means relative paths are
   never safe here. (2026-08-16)
 
+- **`docker compose up` fails again even after moving to an absolute
+  `/srv/appdata/...` path: `Error response from daemon: error while creating
+  mount source path '/srv/appdata/...': mkdir /srv/appdata: read-only file
+  system`** — but `sudo touch /srv/appdata/test.txt` on the real host
+  succeeds fine → **not** a DooD/relative-path problem this time (that was
+  already fixed — see the two entries above), and **not** a real read-only
+  filesystem either (proven by the successful `sudo touch`) → the deploy
+  server (`docker02`) has Docker installed via **Snap**, and snap docker's
+  AppArmor confinement blocks the daemon from reaching `/srv` entirely
+  (only `$HOME`, `/mnt`, `/media` are allowed) — root can write there via a
+  normal shell, but the sandboxed daemon can't, and Docker surfaces that as
+  a misleading "read-only file system" error instead of a permission one.
+  Confirmed conclusively with:
+  `docker run --rm -v /srv/appdata:/test alpine touch /test/writetest` →
+  fails the same way, while the same command against `/home/docker02/appdata`
+  succeeds → **fixed by moving every persistent-data path on this specific
+  server from `/srv/appdata/...` to `/home/docker02/appdata/...`**
+  (`docker-compose.yml`/`.dev.yml`, `Jenkinsfile` `mkdir -p`,
+  `docs/admin-handoff.md` §3). This is a **server-specific workaround, not a
+  real fix** — the actual fix is uninstalling snap docker and installing
+  `docker-ce` normally, which was not done (see `decisions.md` for the
+  rationale). **If this project is ever moved to a different deploy server,
+  check whether that server also uses snap docker before assuming
+  `/srv/appdata` works there too.** (2026-08-16)
+
 _(more as they come up)_

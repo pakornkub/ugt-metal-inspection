@@ -277,9 +277,14 @@ EOF
                         // populated with the trained model file by
                         // admin/DBA/ops — this only creates the empty dir so
                         // the bind mount has somewhere to attach to.
+                        // ponytail: /home/docker02/appdata, NOT the org's usual
+                        // /srv/appdata — this Docker host's daemon is
+                        // snap-installed, whose AppArmor confinement blocks
+                        // /srv entirely (only $HOME/mnt/media are reachable).
+                        // See docs/project-context/troubleshooting.md.
                         sh """
-                          mkdir -p /srv/appdata/${appdataDir}/uploads
-                          mkdir -p /srv/appdata/${appdataDir}/models
+                          mkdir -p /home/docker02/appdata/${appdataDir}/uploads
+                          mkdir -p /home/docker02/appdata/${appdataDir}/models
                         """
 
                         sh "TAG=${buildNum} docker compose -f ${composeFile} up -d --no-build"
