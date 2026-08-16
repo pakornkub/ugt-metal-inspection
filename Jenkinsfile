@@ -75,12 +75,31 @@ pipeline {
                 }
                 stage('AI Service') {
                     steps {
-                        // Throwaway container — no python/ruff install needed
-                        // on the Jenkins agent. Config: ai-service/pyproject.toml.
+                        // `docker build` (context streamed over the Docker API),
+                        // NOT `docker run -v $PWD:/app` (bind mount) — Jenkins
+                        // itself runs in a container talking to the HOST's
+                        // Docker daemon (docker.sock), so $PWD only resolves
+                        // inside Jenkins' own container; a bind mount fails
+                        // with "read-only file system" trying to create that
+                        // path on the real host disk. Build context transfer
+                        // has no such path dependency. Config: ai-service/pyproject.toml.
                         sh '''
-                            docker run --rm -v "$PWD/ai-service:/app" -w /app python:3.11-slim \
-                              sh -c "pip install --quiet ruff && ruff check ."
+                            docker build --rm --network host -t ugt-ai-lint:${BUILD_NUMBER} -f - ai-service <<'EOF'
+FROM python:3.11-slim
+WORKDIR /app
+COPY . .
+RUN pip install --quiet ruff && ruff check .
+EOF
                         '''
+                    }
+                    post {
+                        // The lint check itself lives in the RUN step above (its
+                        // failure fails `docker build`, which fails this stage) —
+                        // this only cleans up the tagged image so lint runs don't
+                        // accumulate images on the Jenkins host.
+                        always {
+                            sh 'docker rmi ugt-ai-lint:${BUILD_NUMBER} || true'
+                        }
                     }
                 }
             }

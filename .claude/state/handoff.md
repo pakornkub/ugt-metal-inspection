@@ -11,18 +11,20 @@ Last updated: 2026-08-16
 
 ## In progress
 
-- Nothing in progress (CI/CD harness install just completed)
+- **Jenkins job `ugt-metal-inspection-dev` กำลังรันจริงแล้ว** (branch `develop`
+  มีอยู่แล้ว, job สร้างแล้ว) — กำลังไล่แก้ทีละจุดที่ pipeline แดง ล่าสุดแก้
+  AI Service lint stage (ดู Done ด้านล่าง + `troubleshooting.md`) — รอ push
+  แล้วดูว่าผ่าน stage ถัดไปหรือติดตรงไหนอีก
 
 ## Next
 
-- สร้าง `develop` branch จาก `main` (ยังไม่มีเลย — Jenkins job `ugt-metal-inspection-dev`
-  ชี้ไปที่ `*/develop` โดยตรง ต้องมี branch นี้อยู่ถึงจะ build ได้)
-- ส่ง `docs/admin-handoff.md` ให้ทีม admin/DevOps — ค่าจริงส่วนใหญ่ตั้งไว้แล้วใน
-  `.env`/`.env.dev` (DB `10.1.0.22`, port 3022-3027) เหลือแค่รอ **ยืนยัน**:
-  ไม่ชน port ระบบอื่น, `UGT_MetalInspection`/`_DEV` สร้างจริงบน SQL Server แล้ว,
-  `proxy-network` มีอยู่บน Docker host, IP เครื่องที่รัน compose (สำหรับ nginx),
-  Jenkins job ทั้ง 2 อัน (prod/dev แยก job — ไม่ใช่ Multibranch) สร้างแล้ว
-- Push ไป `develop` branch ครั้งแรก → เฝ้าดู pipeline ผ่านครบ 10 stage
+- Push commit ที่แก้ Jenkinsfile (AI Service lint) ไป `develop` → ดู pipeline
+  รันต่อจากจุดที่เคยแดง ถ้าเจอ error ใหม่ เปิด `troubleshooting.md` ก่อน
+- ส่ง `docs/admin-handoff.md` ให้ทีม admin/DevOps ยืนยันส่วนที่เหลือ: ไม่ชน port
+  ระบบอื่น, `UGT_MetalInspection`/`_DEV` สร้างจริงบน SQL Server แล้ว,
+  `proxy-network` มีอยู่บน Docker host, IP เครื่องที่รัน compose (สำหรับ nginx)
+- ทำ job `ugt-metal-inspection` (prod, ชี้ `*/main`) ให้เสร็จด้วยถ้ายังไม่ได้ทำ
+  (ตอนนี้เห็นแค่ job dev รันอยู่)
 - (ทางเลือก) เพิ่ม pytest ให้ `ai-service` — ตอนนี้ไม่มี test suite เลย มีแค่ ruff lint
 
 ## Open Questions
@@ -31,6 +33,11 @@ Last updated: 2026-08-16
 
 ## Done (newest first — keep only ~10; older history lives in git and board.md)
 
+- 2026-08-16 แก้ pipeline แดงจริงที่ job `ugt-metal-inspection-dev`: AI Service
+  lint stage ใช้ `docker run -v $PWD:/app` (bind mount) ซึ่ง fail เพราะ Jenkins
+  รันใน container คุยกับ Docker daemon ของ host (DooD) — เปลี่ยนเป็น
+  `docker build` (context stream ผ่าน API ไม่ bind mount) แทน รายละเอียดเต็ม →
+  `docs/project-context/troubleshooting.md`
 - 2026-08-16 Jenkins job เปลี่ยนจาก Multibranch Pipeline เดี่ยว → **2 Pipeline
   job แยกกัน** (`ugt-metal-inspection` ชี้ `*/main`, `-dev` ชี้ `*/develop`) —
   Jenkinsfile ไม่ต้องแก้ (fallback `env.GIT_BRANCH` รองรับอยู่แล้ว) แก้แค่
