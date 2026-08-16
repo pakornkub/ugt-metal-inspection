@@ -182,7 +182,11 @@ compose ตั้ง `AI_MOCK: "false"` ตายตัว ai-service จะพ�
 (ไม่ fallback ไป mock ให้เองอัตโนมัติ) แล้ว restart วนตาม `restart:
 unless-stopped` ไปเรื่อย ๆ ไม่มีวันขึ้น healthy — **ต้องเอาไฟล์โมเดล (`.pt`/
 `.onnx`) ไปวางใน path ข้างบนก่อน deploy ครั้งแรกเสมอ** ไม่งั้น ai-service (และ
-backend ที่ depends_on รอมันอยู่) จะไม่มีวัน healthy — SQL Server ไม่เกี่ยวกับ
+backend ที่ depends_on รอมันอยู่) จะไม่มีวัน healthy — ทางออกชั่วคราวระหว่างรอ
+ไฟล์โมเดล (dev เท่านั้น ห้ามใช้กับ prod): เพิ่ม `AI_MOCK=true` ในไฟล์ `.env`
+ของ credential `env-ugt-metal-inspection-dev` แล้ว deploy ใหม่ — ai-service จะ
+รันด้วย mock predictor (ทายผลจาก hash ของรูป ไม่ใช่ AI จริง) ให้ระบบส่วนอื่น
+ทดสอบต่อได้ พอวางไฟล์โมเดลแล้วค่อยลบบรรทัดนี้ออก — SQL Server ไม่เกี่ยวกับ
 path เหล่านี้เลยเพราะไม่ได้รันเป็น container ในระบบนี้ (ดูข้อ 4)
 
 **Docker network**: ทุก container (prod และ dev) ต่อ external network ชื่อ

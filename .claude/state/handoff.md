@@ -26,9 +26,11 @@ Last updated: 2026-08-16
 - Push commit ที่แก้แล้ว (Jenkinsfile, docker-compose ×2, admin-handoff.md —
   ย้าย path เป็น `/home/docker02/appdata`) ไป `develop` → ดู pipeline รันต่อ
   ถ้าเจอ error ใหม่ เปิด `troubleshooting.md` ก่อน
-- **ต้องเอาไฟล์โมเดล (`.pt`/`.onnx`) ไปวางที่
-  `/home/docker02/appdata/ugt-metal-inspection-dev/models` บน host จริงก่อน**
-  ไม่งั้น ai-service crash loop ตั้งแต่ start (compose ตั้ง `AI_MOCK: "false"`)
+- **เกิดขึ้นจริงแล้ว: Deploy fail "`ai-dev` is unhealthy" เพราะ `models/` ว่าง**
+  → ต้องเอาไฟล์โมเดล (`.pt`) ไปวางที่
+  `/home/docker02/appdata/ugt-metal-inspection-dev/models/box_lock_model.pt`
+  หรือชั่วคราว: เพิ่ม `AI_MOCK=true` ใน credential `env-ugt-metal-inspection-dev`
+  (compose รับ override `${AI_MOCK:-false}` แล้ว) — ดู `troubleshooting.md`
 - (ทางเลือก, แก้ที่ต้นเหตุจริง) ถอด snap docker บน `docker02` ติดตั้ง `docker-ce`
   ใหม่ — จะได้เลิกผูก deploy path กับ user account เฉพาะเจาะจง กลับไปใช้
   `/srv/appdata` มาตรฐานองค์กรได้

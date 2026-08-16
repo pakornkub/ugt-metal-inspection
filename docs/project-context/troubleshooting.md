@@ -64,4 +64,16 @@
   check whether that server also uses snap docker before assuming
   `/srv/appdata` works there too.** (2026-08-16)
 
+- **Deploy stage: `dependency failed to start: container
+  ugt-metal-inspection-ai-dev is unhealthy`** (ai-service ขึ้น Started แล้ว
+  Error ภายในไม่กี่วินาที) → โฟลเดอร์ `models/` บน host ว่างเปล่า แต่ compose
+  default `AI_MOCK=false` → `predictor.py` โยน `FileNotFoundError` ตอน start →
+  crash loop → backend ที่ `depends_on: service_healthy` fail ตาม — ยืนยันด้วย
+  `docker logs ugt-metal-inspection-ai-dev --tail 20` → แก้ถาวร: วางไฟล์โมเดล
+  `.pt` ที่ `/home/docker02/appdata/ugt-metal-inspection(-dev)/models/box_lock_model.pt`
+  · แก้ชั่วคราว (dev เท่านั้น): เพิ่ม `AI_MOCK=true` ใน env file ของ Jenkins
+  credential `env-ugt-metal-inspection-dev` (compose รับ override ผ่าน
+  `${AI_MOCK:-false}` แล้ว) — เช็คว่า่รันโหมดไหนอยู่ได้จาก `GET /health` ซึ่งตอบ
+  `{"mock": true/false}` (2026-08-16)
+
 _(more as they come up)_

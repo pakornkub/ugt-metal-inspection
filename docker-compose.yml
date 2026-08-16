@@ -11,7 +11,10 @@ services:
     ports:
       - "${AI_PORT:-8000}:8000"
     environment:
-      AI_MOCK: "false"
+      # Overridable via .env — see docker-compose.dev.yml comment. Prod should
+      # always run with a real model (AI_MOCK unset/false); the override
+      # exists so a missing model file is diagnosable, not deployable-around.
+      AI_MOCK: "${AI_MOCK:-false}"
       MODEL_PATH: "models/box_lock_model.pt"
       AI_CONF_THRESHOLD: "0.25"
     volumes:
