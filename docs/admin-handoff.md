@@ -18,7 +18,7 @@
 
 | # | ระบบ | งาน | ใช้เวลาโดยประมาณ |
 | --- | --- | --- | --- |
-| 1 | Jenkins | สร้าง credentials 2 ตัว + pipeline job + webhook + จัดสรร port 6 ช่อง (3 prod + 3 dev) | ~20 นาที |
+| 1 | Jenkins | สร้าง credentials 2 ตัว + Pipeline job 2 อัน (prod/dev แยกกัน) + webhook + จัดสรร port 6 ช่อง (3 prod + 3 dev) | ~20 นาที |
 | 2 | SonarQube | สร้าง 2 projects + ผูก Quality Gate + webhook | ~10 นาที |
 | 3 | Server | เตรียม `/srv/appdata` (ครั้งแรกของ server เท่านั้น) | ~5 นาที |
 | 4 | Database | สร้าง database เปล่า 2 ตัว (prod/dev) บน SQL Server ที่มีอยู่แล้ว + ส่ง connection string กลับ | ~10 นาที |
@@ -39,15 +39,36 @@
 `nvd` (NVD API key สำหรับ OWASP scan) ถ้า Jenkins server นี้เคยตั้งโปรเจคอื่นแล้ว
 ไม่ต้องสร้างซ้ำ — ใช้ตัวเดิม
 
-### 1.2 สร้าง Pipeline job
+### 1.2 สร้าง Pipeline job — **2 job แยกกัน ไม่ใช่ Multibranch**
 
-1. New Item → ชื่อ `ugt-metal-inspection` → เลือก **Multibranch Pipeline**
-2. Branch Sources → GitHub → repo `https://github.com/pakornkub/TSL-AI` → discover branches `main` และ `develop`
-3. **สำคัญ**: ปิด "Lightweight checkout" (ถ้าเปิดไว้ stage แรกจะพัง)
+สร้าง **Pipeline job ธรรมดา 2 อัน** อันละ branch (ไม่ใช้ Multibranch Pipeline ที่
+auto-discover ทุก branch):
+
+**Job 1 — prod:**
+
+1. New Item → ชื่อ `ugt-metal-inspection` → เลือก **Pipeline**
+2. Build Triggers → เปิด **"GitHub hook trigger for GITScm polling"**
+3. Pipeline → Definition: **"Pipeline script from SCM"** → SCM: **Git** →
+   Repository URL: `https://github.com/pakornkub/TSL-AI` →
+   **Branches to build: `*/main`** → Script Path: `Jenkinsfile`
+4. **สำคัญ**: ปิด "Lightweight checkout" (ถ้าเปิดไว้ stage แรกจะพัง)
+
+**Job 2 — dev:** ทำซ้ำข้อ 1-4 เหมือนกันทุกอย่าง ยกเว้น:
+
+- ชื่อ job: `ugt-metal-inspection-dev`
+- **Branches to build: `*/develop`**
+
+Jenkinsfile ไม่ต้องแก้อะไร — โค้ดตรวจ branch ด้วย
+`env.BRANCH_NAME ?: env.GIT_BRANCH?.tokenize('/')?.last()` ซึ่งรองรับทั้ง
+Multibranch (`BRANCH_NAME`) และ Pipeline job ธรรมดาแบบนี้ (`GIT_BRANCH` เช่น
+`origin/main`) อยู่แล้ว
 
 ### 1.3 ตั้ง Webhook ที่ GitHub repo
 
 - Settings → Webhooks → Add: URL `http://__JENKINS_HOST__:8080/github-webhook/` · event: **push เท่านั้น**
+- webhook อันเดียวใช้ร่วมกันได้ทั้ง 2 job — GitHub ยิง event นี้ทีเดียว Jenkins
+  จะส่งต่อให้ทุก job ที่เปิด "GitHub hook trigger" ไว้เอง (แต่ละ job เช็คเองว่า
+  push เข้า branch ที่ตัวเองดูแลไหมก่อนจะ build จริง)
 
 ### 1.4 จัดสรร host port
 
@@ -172,7 +193,7 @@ TABLE, INSERT/UPDATE/DELETE/SELECT) บน database ทั้งสองตั�
 | **→ `__APP_SERVER_IP__` ข้อ 1.5** | IP ของเครื่องที่รัน docker compose ระบบนี้ | **จำเป็น — สำหรับตั้ง nginx proxy_pass** |
 | **→ `DATABASE_URL` prod (ข้อ 4)** | host/port/database/user/password ของ SQL Server จริง | ค่าใส่ไว้แล้วใน `.env` ที่ root (`10.1.0.22`, database `UGT_MetalInspection`) — **รอยืนยันจาก DBA ว่า database นี้สร้างแล้วจริง** |
 | **→ `DATABASE_URL` dev (ข้อ 4)** | เหมือนกันแต่ database=UGT_MetalInspection_DEV | ค่าใส่ไว้แล้วใน `.env.dev` ที่ root — รอยืนยันเช่นกัน |
-| ยืนยัน Jenkins job สร้างแล้ว | ลิงก์ job | |
+| ยืนยัน Jenkins job ทั้ง 2 อันสร้างแล้ว | ลิงก์ job prod + dev | |
 | ยืนยัน SonarQube projects + webhook แล้ว | ลิงก์ project | |
 | ยืนยัน `/srv/appdata` เตรียมแล้ว | — | |
 | ยืนยัน nginx location block ตั้งแล้วทั้ง prod/dev | — | |

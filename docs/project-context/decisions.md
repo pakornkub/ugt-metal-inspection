@@ -114,3 +114,14 @@
   infra/product ไว้ · ไม่ได้แตะ: คำว่า "box inspection" ตัวพิมพ์เล็กที่เป็น
   generic description (README บรรทัดแรกที่บรรยาย, `board.md` feature row) —
   ไม่ใช่ proper noun ของ product ชื่อ ถือเป็นคำบรรยายกิจกรรมตามปกติ ไม่ใช่แบรนด์
+- 2026-08-16 Jenkins job เป็น **2 Pipeline job ธรรมดาแยกกัน** (`ugt-metal-inspection`
+  ชี้ `*/main`, `ugt-metal-inspection-dev` ชี้ `*/develop`) ไม่ใช่ Multibranch
+  Pipeline เดี่ยวที่ auto-discover ทุก branch แบบเดิม — **because** ผู้ใช้ระบุ
+  ต้องการแบบนี้ (เหตุผลไม่ได้ระบุ — อาจเพื่อคุม permission/notification/URL
+  แยกกันชัดเจนต่อ environment) · rejected: Multibranch Pipeline เดียว (เดิม —
+  ง่ายกว่าตรงที่เพิ่ม branch ใหม่แล้ว auto-discover เอง แต่ผู้ใช้ปฏิเสธไปแล้ว)
+  · **Jenkinsfile ไม่ต้องแก้โค้ดเลย** เพราะ branch-detection เดิมใช้
+  `env.BRANCH_NAME ?: env.GIT_BRANCH?.tokenize('/')?.last()` อยู่แล้ว ซึ่ง
+  `GIT_BRANCH` (เช่น `origin/main`) คือค่าที่ Pipeline job ธรรมดาตั้งให้เอง
+  (ต่าง Multibranch ที่ตั้ง `BRANCH_NAME` แทน) — แก้แค่ `docs/admin-handoff.md`
+  §1.2 ให้สอนสร้าง 2 job + §1.3 อธิบายว่า webhook เดียวใช้ร่วมกันได้
