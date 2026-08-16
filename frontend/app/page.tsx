@@ -166,7 +166,7 @@ export default function InspectionPage() {
     <main className="mx-auto flex min-h-screen w-full max-w-[768px] flex-col bg-slate-100 px-4 pt-[env(safe-area-inset-top)] pb-4">
       <div className="flex flex-1 flex-col gap-4 pt-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-slate-800">Box Inspection</h1>
+          <h1 className="text-xl font-bold text-slate-800">UGT Metal Inspection</h1>
           {step === "scan" ? (
             <Link
               href="/records"

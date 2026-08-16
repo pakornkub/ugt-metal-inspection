@@ -8,28 +8,28 @@ datasource db {
 }
 
 model BoxType {
-  id   Int    @id @default(autoincrement())
-  name String @db.VarChar(50)
+  id   Int    @id @default(autoincrement()) @map("Id")
+  name String @map("Name") @db.VarChar(50)
 
   @@map("BoxTypes")
 }
 
 model BoxInspection {
-  id             BigInt   @id @default(autoincrement())
-  name           String   @db.NVarChar(100)
-  lot_no         String   @db.VarChar(6)
-  case_no        String   @db.VarChar(3)
-  box_type       String   @db.VarChar(50)
-  image_1        String   @db.VarChar(255)
-  result_1       String   @db.VarChar(10)
-  image_2        String   @db.VarChar(255)
-  result_2       String   @db.VarChar(10)
-  image_3        String   @db.VarChar(255)
-  result_3       String   @db.VarChar(10)
-  image_4        String   @db.VarChar(255)
-  result_4       String   @db.VarChar(10)
-  overall_result String   @db.VarChar(10)
-  created_at     DateTime @default(now()) @db.DateTime2
+  id            BigInt   @id @default(autoincrement()) @map("Id")
+  name          String   @map("Name") @db.NVarChar(100)
+  lotNo         String   @map("LotNo") @db.VarChar(6)
+  caseNo        String   @map("CaseNo") @db.VarChar(3)
+  boxType       String   @map("BoxType") @db.VarChar(50)
+  image1        String   @map("Image1") @db.VarChar(255)
+  result1       String   @map("Result1") @db.VarChar(10)
+  image2        String   @map("Image2") @db.VarChar(255)
+  result2       String   @map("Result2") @db.VarChar(10)
+  image3        String   @map("Image3") @db.VarChar(255)
+  result3       String   @map("Result3") @db.VarChar(10)
+  image4        String   @map("Image4") @db.VarChar(255)
+  result4       String   @map("Result4") @db.VarChar(10)
+  overallResult String   @map("OverallResult") @db.VarChar(10)
+  createdAt     DateTime @default(now()) @map("CreatedAt") @db.DateTime2
 
   @@map("BoxInspections")
 }

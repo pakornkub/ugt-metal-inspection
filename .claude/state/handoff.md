@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-08-13
+Last updated: 2026-08-16
 
 <!-- ของสด: งานถึงไหน คิวอะไรต่อ ติดคำถามอะไร — โหลดเข้า context ทุก session ผ่าน
      CLAUDE.md import · อัปเดตผ่าน /ugt-handoff ตอนจบทุก work chunk (แม้พรุ่งนี้จะ
@@ -11,19 +11,35 @@ Last updated: 2026-08-13
 
 ## In progress
 
-- Nothing in progress (harness install just completed)
+- **Jenkins job `ugt-metal-inspection-dev` กำลังรันจริงแล้ว** (branch `develop`
+  มีอยู่แล้ว, job สร้างแล้ว) — กำลังไล่แก้ DooD bug ทีละจุดที่ pipeline แดง
+  (3 จุดแล้ว: AI lint stage, `ai-service` models volume relative path, และ
+  **`/srv/appdata` ใช้ไม่ได้เลยเพราะ server `docker02` ลง Docker ผ่าน snap —
+  ย้ายไป `/home/docker02/appdata` แทนแล้ว** — ดู Done + `troubleshooting.md`)
+  — รอ push แล้วดูว่าผ่าน Deploy stage หรือติดจุดอื่นอีก **กติกาที่ตั้งไว้แล้ว:
+  bind mount ทุกจุดต้องเป็น absolute path บน host จริง ห้าม relative — และบน
+  server `docker02` โดยเฉพาะ ต้องใช้ `/home/docker02/appdata` ไม่ใช่
+  `/srv/appdata`** (ดู architecture.md § Deviations)
 
 ## Next
 
-- สร้าง `develop` branch จาก `main` (ยังไม่มีเลย — Jenkins multibranch ต้อง discover ทั้งคู่)
-- ส่ง `docs/admin-handoff.md` ให้ทีม admin/DevOps ตั้ง Jenkins job + credentials +
-  SonarQube projects/webhook + ยืนยัน port 8 ช่อง (prod ×4 + dev ×4) + IP เครื่องที่
-  รัน docker compose (สำหรับตั้ง nginx proxy_pass ที่ `https://ugtweb.ube.co.th/`)
-  + สร้าง database `box_inspection`/`box_inspection_dev` เอง (§4 ในไฟล์)
-- Push ไป `develop` branch ครั้งแรก → เฝ้าดู pipeline ผ่านครบ 10 stage
+- Push commit ที่แก้แล้ว (Jenkinsfile, docker-compose ×2, admin-handoff.md —
+  ย้าย path เป็น `/home/docker02/appdata`) ไป `develop` → ดู pipeline รันต่อ
+  ถ้าเจอ error ใหม่ เปิด `troubleshooting.md` ก่อน
+- **เกิดขึ้นจริงแล้ว: Deploy fail "`ai-dev` is unhealthy" เพราะ `models/` ว่าง**
+  → ต้องเอาไฟล์โมเดล (`.pt`) ไปวางที่
+  `/home/docker02/appdata/ugt-metal-inspection-dev/models/box_lock_model.pt`
+  หรือชั่วคราว: เพิ่ม `AI_MOCK=true` ใน credential `env-ugt-metal-inspection-dev`
+  (compose รับ override `${AI_MOCK:-false}` แล้ว) — ดู `troubleshooting.md`
+- (ทางเลือก, แก้ที่ต้นเหตุจริง) ถอด snap docker บน `docker02` ติดตั้ง `docker-ce`
+  ใหม่ — จะได้เลิกผูก deploy path กับ user account เฉพาะเจาะจง กลับไปใช้
+  `/srv/appdata` มาตรฐานองค์กรได้
+- ส่ง `docs/admin-handoff.md` ให้ทีม admin/DevOps ยืนยันส่วนที่เหลือ: ไม่ชน port
+  ระบบอื่น, `UGT_MetalInspection`/`_DEV` สร้างจริงบน SQL Server แล้ว,
+  `proxy-network` มีอยู่แล้ว, IP เครื่องที่รัน compose (สำหรับ nginx)
+- ทำ job `ugt-metal-inspection` (prod, ชี้ `*/main`) ให้เสร็จด้วยถ้ายังไม่ได้ทำ
+  (ตอนนี้เห็นแค่ job dev รันอยู่)
 - (ทางเลือก) เพิ่ม pytest ให้ `ai-service` — ตอนนี้ไม่มี test suite เลย มีแค่ ruff lint
-- (ทางเลือก) สร้าง `.env`/`.env.dev` local ที่ root สำหรับทดสอบ docker-compose
-  ก่อน push จริง — compose ทุกตัวมี default ให้ครบแล้ว ไม่บังคับต้องมี
 
 ## Open Questions
 
@@ -31,10 +47,25 @@ Last updated: 2026-08-13
 
 ## Done (newest first — keep only ~10; older history lives in git and board.md)
 
-- 2026-08-13 ติดตั้ง org CI/CD ผ่าน `/ugt-nextjs-full-setup` (เฉพาะ Quality + CI/CD —
-  ไม่ติดตั้ง Database/Design/Auth/Mail/Upload เพราะมีอยู่แล้วหรือไม่ต้องการ):
-  Jenkinsfile 10 stage ปรับสำหรับ 3 service, sonar-project.properties multi-source,
-  owasp-suppressions.xml, docker-compose.yml/.dev.yml (healthcheck + image tag +
-  uploads bind mount), health endpoint ทั้ง 3 service, vitest/eslint/prettier/husky
-  ทั้ง frontend และ backend, ruff config สำหรับ ai-service, docs/project-context/
-  ทั้ง 7 ไฟล์, docs/admin-handoff.md
+- 2026-08-16 แก้ pipeline แดงจริง 3 จุดต่อเนื่องที่ job `ugt-metal-inspection-dev`
+  ทั้งหมดเกี่ยวกับ Docker-outside-of-Docker (Jenkins รันใน container คุยกับ
+  Docker daemon ของ host ผ่าน `docker.sock`): (1) AI lint stage ใช้ `docker
+  run -v $PWD:/app` → เปลี่ยนเป็น `docker build` (2) `ai-service`'s `models`
+  volume เป็น relative path → เปลี่ยนเป็น absolute (3) **`/srv/appdata` เข้าไม่ได้
+  เลยเพราะ server `docker02` ลง Docker ผ่าน Snap (AppArmor บล็อก `/srv`,
+  พิสูจน์ด้วย `sudo touch` ผ่านแต่ `docker run -v /srv/...` fail)** → ย้าย
+  persistent-data path ทั้งหมดเป็น `/home/docker02/appdata/...` แทน (เฉพาะ
+  server นี้) แก้ `docker-compose.yml`/`.dev.yml`/`Jenkinsfile`/
+  `admin-handoff.md` §3 ครบ — แก้ที่ต้นเหตุจริง (ถอด snap ติดตั้ง docker-ce)
+  ยังไม่ได้ทำ รายละเอียดเต็ม → `docs/project-context/troubleshooting.md`
+- 2026-08-16 Jenkins job เปลี่ยนจาก Multibranch Pipeline เดี่ยว → 2 Pipeline
+  job แยกกัน (`ugt-metal-inspection` ชี้ `*/main`, `-dev` ชี้ `*/develop`) ·
+  เปลี่ยนชื่อ project identifier จาก `box-inspection` เป็น `ugt-metal-inspection`
+  ทั่ว repo ทั้ง infra และ UI/product text
+- 2026-08-15 ผู้ใช้สร้าง `.env`/`.env.dev` จริงที่ root — DB `10.1.0.22`,
+  database `UGT_MetalInspection`/`_DEV`, port จริง 3022-3024 (prod)/3025-3027
+  (dev) — sync เอกสารทั้งหมดแล้ว
+- 2026-08-13 ติดตั้ง org CI/CD ผ่าน `/ugt-nextjs-full-setup` ทั้งชุด (Jenkinsfile
+  10 stage, sonar-project.properties, docker-compose ×2, vitest/eslint/prettier,
+  docs/project-context/ ครบ) · ต่อมา: ลบ mssql container, ปรับ schema.prisma
+  เป็น PascalCase, เปลี่ยน network เป็น external `proxy-network`

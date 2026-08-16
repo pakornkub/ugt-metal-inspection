@@ -3,7 +3,7 @@ import multer from "multer";
 import os from "os";
 import path from "path";
 
-const tempDir = path.join(os.tmpdir(), "box-inspection-uploads");
+const tempDir = path.join(os.tmpdir(), "ugt-metal-inspection-uploads");
 if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
 }

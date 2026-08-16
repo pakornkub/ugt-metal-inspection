@@ -10,7 +10,9 @@
 - `frontend/` — Next.js 16 App Router, UI สำหรับ iPad หน้างาน (สแกน QR → ถ่ายรูป 4 มุม → ส่งตรวจ AI → บันทึกผล)
 - `backend/` — Express 5 + Prisma REST API, คุย SQL Server ตรง ๆ, proxy งานตรวจไปยัง ai-service
 - `ai-service/` — Python FastAPI, รับรูป → YOLO model (หรือ mock) → ผล LOCK/UNLOCK/NO_DETECTION
-- `mssql` — SQL Server 2017 container ของระบบเอง (ไม่ใช่ DB กลางองค์กร) ตั้งใน docker-compose.yml
+- SQL Server — **server ที่มีอยู่แล้วขององค์กร ไม่ได้รันเป็น container** (เปลี่ยนจาก
+  bundled mssql container 2026-08-13 — ดู decisions.md) เชื่อมผ่าน `DATABASE_URL`
+  ใน `.env` เท่านั้น
 
 ## Data flow หลัก
 
@@ -28,8 +30,8 @@
 
 | ตาราง | ของ feature | หมายเหตุ |
 | --- | --- | --- |
-| `BoxTypes` | dropdown ประเภทกล่อง | seed จาก `backend/prisma/seed.ts` (idempotent) — เดิมชื่อ `box_types`, เปลี่ยนเป็น PascalCase 2026-08-13 |
-| `BoxInspections` | บันทึกผลตรวจ 4 รูป + ผลรวม | เดิมชื่อ `box_inspection`, เปลี่ยนเป็น PascalCase 2026-08-13 — **คอลัมน์ยังเป็น snake_case** (`lot_no`, `case_no`, ...) ไม่ได้แตะ เพราะเป็น wire format เดียวกับ API/frontend อยู่ |
+| `BoxTypes` | dropdown ประเภทกล่อง | seed จาก `backend/prisma/seed.ts` (idempotent) — เดิมชื่อ `box_types`/คอลัมน์ camelCase, เปลี่ยนเป็น PascalCase (ตาราง+คอลัมน์) 2026-08-13 ตาม `ugt-nextjs-database-setup` |
+| `BoxInspections` | บันทึกผลตรวจ 4 รูป + ผลรวม | เดิมชื่อ `box_inspection`/คอลัมน์ snake_case, เปลี่ยนเป็น PascalCase (ตาราง+คอลัมน์) 2026-08-13 — `@map` ใน `backend/prisma/schema.prisma` คุมชื่อคอลัมน์จริงใน DB, ส่วน Prisma field ในโค้ดยังเป็น camelCase (`lotNo`) ตามปกติ — **API JSON response ยังส่ง snake_case เหมือนเดิม** (`lot_no`) เพราะ route แปลงคีย์ก่อนส่งอยู่แล้ว (`backend/src/routes/inspection.ts`) ไม่กระทบ frontend |
 
 ## Testing map
 
@@ -43,17 +45,43 @@
   ปรับ path เป็น multi-service เอง ไม่ตรง org template ตรง ๆ
 - **ไม่มีระบบ login** — ผู้ใช้เลือกไม่ติดตั้ง auth (หน้างานเปิด ไม่มีการยืนยันตัวตน)
 - **มี basePath `/ugt-metal-inspection` (prod) / `/ugt-metal-inspection-dev` (dev)** —
-  เข้าผ่าน `https://ugtweb.ube.co.th/` ที่มี nginx อยู่คนละเครื่องกับ Docker host
-  ของระบบนี้ (ต่อกันผ่าน network ธรรมดา ไม่ใช่ Docker network ร่วม จึงไม่ใช้
-  `proxy-network: external` แบบ org template) — frontend ยัง publish host port
-  ตรงไว้ด้วยสำหรับ iPad บน LAN โรงงาน (กล้อง/QR ไม่อยากผ่าน proxy กลาง)
+  เข้าผ่าน `https://ugtweb.ube.co.th/` — ทุก service ต่อ external network
+  `proxy-network` (ต้องมีอยู่แล้วบน Docker host ก่อน `docker compose up` —
+  ไม่ได้สร้างจาก compose นี้ ถ้าไม่มี compose จะ error ทันที) — frontend ยัง
+  publish host port ตรงไว้ด้วยสำหรับ iPad บน LAN โรงงาน (กล้อง/QR ไม่อยากผ่าน
+  proxy กลาง)
 - **`prisma db push` ไม่ใช่ `migrate deploy`** — ไม่มี `prisma/migrations/` เลย, backend
   container รัน `db push && db seed` ทุกครั้งที่ start (ทั้งสอง idempotent) แทนขั้นตอน migrate
   แยกใน Jenkins Deploy stage
-- **mssql ใช้ Docker named volume ไม่ใช่ bind mount ใต้ `/srv/appdata`** — image ทางการ
-  ต้องการ uid ภายในของตัวเอง, bind mount เสี่ยง permission ผิด (ดู decisions.md)
-- **ชื่อ database (`box_inspection`/`box_inspection_dev`) ยังเป็น snake_case** —
-  ปรับเฉพาะชื่อ**ตาราง**เป็น PascalCase ตามคำขอ ไม่ได้แตะชื่อ database เพราะ
-  DATABASE_URL ที่มีอยู่ (docker-compose.yml) อ้างชื่อนี้อยู่แล้ว เปลี่ยนจะกระทบ
-  ทุกที่ที่อ้างถึง — ต้องสร้าง database นี้เองก่อนใช้งานจริง (ดู
-  `docs/admin-handoff.md` §4, ไม่ใช่ auto-create จาก `prisma db push`)
+- **SQL Server ไม่ได้ bundle เป็น container** — `docker-compose.yml`/`.dev.yml`
+  ไม่มี service `mssql` แล้ว (ลบออก 2026-08-13) เชื่อมต่อ server ที่มีอยู่แล้วของ
+  องค์กรผ่าน `DATABASE_URL` ใน `.env` (Jenkins credential `env-ugt-metal-inspection`)
+  แทน — ดู decisions.md
+- **ชื่อ database (`UGT_MetalInspection`/`UGT_MetalInspection_DEV`) ไม่ตรงกับ
+  ชื่อตาราง** — ปรับชื่อ**ตารางและคอลัมน์**เป็น PascalCase แล้ว (ตาม
+  `ugt-nextjs-database-setup`) แต่ database เองตั้งชื่อแยกต่างหาก ตาม SQL Server
+  จริง (`10.1.0.22`) ที่ DBA จัดสรรให้ — DBA/admin ต้องสร้าง database นี้เองก่อน
+  ใช้งานจริง (ดู `docs/admin-handoff.md` §4, ไม่ใช่ auto-create จาก `prisma db push`)
+- **`url` อยู่ใน `schema.prisma` datasource block ตรง ๆ** ไม่ใช่ `prisma.config.ts`
+  ตามมาตรฐาน `ugt-nextjs-database-setup` เต็มรูปแบบ (ซึ่งต้องมี driver adapter
+  `@prisma/adapter-mssql` + `prisma.config.ts` ด้วย) — **because** โปรเจคนี้ใช้
+  Prisma 6 classic pattern อยู่แล้ว ทำงานได้ปกติไม่ต้องมี adapter, การย้ายทั้งระบบ
+  ไปใช้ adapter pattern (+ `@t3-oss/env-nextjs` ซึ่งเป็นของ Next.js ล้วน ใช้กับ
+  Express ตรง ๆ ไม่ได้ด้วย) เป็นงานใหญ่เกินขอบเขตที่ขอ (ปรับแค่ naming ของคอลัมน์)
+- **Jenkins รันแบบ Docker-outside-of-Docker (DooD)** — Jenkins เองอยู่ใน container
+  แต่คุยกับ Docker daemon ของ **host จริง** ผ่าน `docker.sock` — ผลตาม: **ทุก
+  bind mount ใน `docker-compose.yml`/`.dev.yml` ต้องเป็น absolute path บน host
+  จริงเท่านั้น ห้าม relative path เด็ดขาด** (relative path resolve ผิดไปเป็น
+  path ข้างใน container ของ Jenkins เอง ไม่ใช่ host จริง — เจอมาแล้วทั้งกับ AI
+  lint stage และ `ai-service`'s `models` volume, ดู
+  `docs/project-context/troubleshooting.md`) และ path ฐานต้องถูกเตรียมโดย SSH
+  เข้า **host จริง** เท่านั้น ไม่ใช่ `docker exec` เข้า Jenkins container
+- **persistent-data path เป็น `/home/docker02/appdata/...` ไม่ใช่
+  `/srv/appdata/...` มาตรฐานองค์กร** — **because** Docker บน server deploy
+  (`docker02`) ติดตั้งผ่าน **Snap**, AppArmor confinement ของ snap docker บล็อก
+  ไม่ให้ daemon เข้าถึง `/srv` เลย (อนุญาตแค่ `$HOME`/`/mnt`/`/media`) ยืนยันด้วย
+  `docker run -v /srv/...` fail ด้วย "read-only file system" แต่ `sudo touch`
+  ตรง ๆ ผ่านปกติ (พิสูจน์ว่าไม่ใช่ปัญหา filesystem จริง) — เปลี่ยนมาใช้
+  `/home/docker02/appdata/<project>(-dev)/{uploads,models}` แทนเฉพาะ server นี้
+  · แก้ที่ต้นเหตุจริง (ยังไม่ได้ทำ): ถอด snap docker ติดตั้ง `docker-ce` ใหม่ —
+  รายละเอียดเต็ม → `docs/project-context/troubleshooting.md` + `decisions.md`

@@ -75,12 +75,31 @@ pipeline {
                 }
                 stage('AI Service') {
                     steps {
-                        // Throwaway container — no python/ruff install needed
-                        // on the Jenkins agent. Config: ai-service/pyproject.toml.
+                        // `docker build` (context streamed over the Docker API),
+                        // NOT `docker run -v $PWD:/app` (bind mount) — Jenkins
+                        // itself runs in a container talking to the HOST's
+                        // Docker daemon (docker.sock), so $PWD only resolves
+                        // inside Jenkins' own container; a bind mount fails
+                        // with "read-only file system" trying to create that
+                        // path on the real host disk. Build context transfer
+                        // has no such path dependency. Config: ai-service/pyproject.toml.
                         sh '''
-                            docker run --rm -v "$PWD/ai-service:/app" -w /app python:3.11-slim \
-                              sh -c "pip install --quiet ruff && ruff check ."
+                            docker build --rm --network host -t ugt-ai-lint:${BUILD_NUMBER} -f - ai-service <<'EOF'
+FROM python:3.11-slim
+WORKDIR /app
+COPY . .
+RUN pip install --quiet ruff && ruff check .
+EOF
                         '''
+                    }
+                    post {
+                        // The lint check itself lives in the RUN step above (its
+                        // failure fails `docker build`, which fails this stage) —
+                        // this only cleans up the tagged image so lint runs don't
+                        // accumulate images on the Jenkins host.
+                        always {
+                            sh 'docker rmi ugt-ai-lint:${BUILD_NUMBER} || true'
+                        }
                     }
                 }
             }
@@ -177,8 +196,8 @@ pipeline {
                 script {
                     def br        = (env.BRANCH_NAME ?: env.GIT_BRANCH?.tokenize('/')?.last())
                     def isProd    = (br == 'main')
-                    def sonarKey  = isProd ? 'box-inspection'     : 'box-inspection-dev'
-                    def sonarName = isProd ? 'Box Inspection System' : 'Box Inspection System (Dev)'
+                    def sonarKey  = isProd ? 'ugt-metal-inspection'     : 'ugt-metal-inspection-dev'
+                    def sonarName = isProd ? 'UGT Metal Inspection System' : 'UGT Metal Inspection System (Dev)'
                     withSonarQubeEnv('SonarQube') {
                         sh "${tool('SonarQube-Scanner')}/bin/sonar-scanner -Dsonar.projectKey=${sonarKey} -Dsonar.projectName='${sonarName}'"
                     }
@@ -221,7 +240,7 @@ pipeline {
 
                     def suffix = isProd ? '' : '-dev'
                     for (svc in ['frontend', 'backend', 'ai']) {
-                        sh "docker tag box-inspection-${svc}${suffix}:${buildNum} box-inspection-${svc}${suffix}:latest"
+                        sh "docker tag ugt-metal-inspection-${svc}${suffix}:${buildNum} ugt-metal-inspection-${svc}${suffix}:latest"
                     }
                 }
             }
@@ -239,9 +258,9 @@ pipeline {
                 script {
                     def br            = (env.BRANCH_NAME ?: env.GIT_BRANCH?.tokenize('/')?.last())
                     def isProd        = (br == 'main')
-                    def envCredId     = isProd ? 'env-box-inspection'     : 'env-box-inspection-dev'
-                    def composeFile   = isProd ? 'docker-compose.yml'     : 'docker-compose.dev.yml'
-                    def appdataDir    = isProd ? 'box-inspection'         : 'box-inspection-dev'
+                    def envCredId     = isProd ? 'env-ugt-metal-inspection'     : 'env-ugt-metal-inspection-dev'
+                    def composeFile   = isProd ? 'docker-compose.yml'           : 'docker-compose.dev.yml'
+                    def appdataDir    = isProd ? 'ugt-metal-inspection'         : 'ugt-metal-inspection-dev'
                     def buildNum      = env.BUILD_NUMBER
 
                     withCredentials([file(credentialsId: envCredId, variable: 'ENV_FILE')]) {
@@ -251,14 +270,21 @@ pipeline {
                         // runs `prisma db push && prisma db seed` on every
                         // start, and both are idempotent (see prisma/seed.ts).
 
-                        // [VOLUME] uploads — first-run path prep (idempotent).
-                        // mssql uses a Docker-managed named volume instead
-                        // (see docker-compose.yml comment), so it needs none
-                        // of this.
+                        // [VOLUME] uploads + models — first-run path prep
+                        // (idempotent). SQL Server is external (not a
+                        // container here), so there's no [VOLUME]/named-volume
+                        // prep needed for it. `models` must actually be
+                        // populated with the trained model file by
+                        // admin/DBA/ops — this only creates the empty dir so
+                        // the bind mount has somewhere to attach to.
+                        // ponytail: /home/docker02/appdata, NOT the org's usual
+                        // /srv/appdata — this Docker host's daemon is
+                        // snap-installed, whose AppArmor confinement blocks
+                        // /srv entirely (only $HOME/mnt/media are reachable).
+                        // See docs/project-context/troubleshooting.md.
                         sh """
-                          if [ ! -d /srv/appdata/${appdataDir}/uploads ]; then
-                            mkdir -p /srv/appdata/${appdataDir}/uploads
-                          fi
+                          mkdir -p /home/docker02/appdata/${appdataDir}/uploads
+                          mkdir -p /home/docker02/appdata/${appdataDir}/models
                         """
 
                         sh "TAG=${buildNum} docker compose -f ${composeFile} up -d --no-build"
@@ -267,7 +293,7 @@ pipeline {
                         // so the result matches each container's HEALTHCHECK.
                         def suffix = isProd ? '' : '-dev'
                         for (svc in ['frontend', 'backend', 'ai']) {
-                            def containerName = "box-inspection-${svc}${suffix}"
+                            def containerName = "ugt-metal-inspection-${svc}${suffix}"
                             sh """
                               echo "Waiting for ${containerName} to become healthy..."
                               for i in \$(seq 1 24); do
